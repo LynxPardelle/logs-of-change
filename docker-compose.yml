@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  logs-of-change-production:
+    container_name: logs-of-change-production
+    build:
+      target: production
+      context: .
+      args:
+        - PORT=${PORT:-3000}
+    ports:
+      - '${PORT:-3000}:${PORT:-3000}'
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '512m'
+        reservations:
+          cpus: '0.25'
+          memory: '256m'
+
+  logs-of-change-dev:
+    container_name: logs-of-change-dev
+    restart: unless-stopped
+    env_file: .env
+    build:
+      target: dev
+      context: .
+      args:
+        - PORT=${PORT:-3000}
+    ports:
+      - '${PORT:-3000}:${PORT:-3000}'
+      - '9229:9229'
+    volumes:
+      - .:/project
+      - node_modules:/project/node_modules/
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: '512m'
+        reservations:
+          cpus: '0.25'
+          memory: '256m'
+
+volumes:
+  node_modules:

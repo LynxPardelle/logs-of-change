@@ -71,3 +71,37 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](LICENSE).
+
+## 🧑‍💻 Developing
+
+The project is fully dockerized 🐳, if we want to start the app in **development mode**, we just need to run:
+
+```bash
+docker-compose up -d logs-of-change-dev
+```
+
+This development mode with work with **hot-reload** and exposing a **debug port**, the `9229`, so later we can connect from our editor to it.
+
+Now, you should be able to start debugging configuring using your IDE. For example, if you are using vscode, you can create a `.vscode/launch.json` file with the following configuration:
+
+```json
+{
+  "version": "0.1.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach to docker",
+      "restart": true,
+      "port": 9229,
+      "remoteRoot": "/project"
+    }
+  ]
+}
+```
+
+Also, if you want to run the **production mode**, you can run:
+
+```bash
+docker-compose up -d logs-of-change-production
+```
