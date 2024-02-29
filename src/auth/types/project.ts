@@ -9,7 +9,7 @@ export type TProject = {
   description: string;
   subscription: TSubscription | string;
   subscriptionEnd: Date;
-  changeLogs: (TChangeLog | string)[];
+  changeLog: TChangeLog | string;
   apiKeys: string[];
   createdAt: Date;
   updatedAt: Date;

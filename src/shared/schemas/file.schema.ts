@@ -1,4 +1,4 @@
-import { Document, Model } from 'mongoose';
+import { HydratedDocument, Model } from 'mongoose';
 import { Prop, SchemaFactory, Schema } from '@nestjs/mongoose';
 import { TFile } from '../types/file.type';
 
@@ -24,5 +24,5 @@ class File implements Omit<TFile, '_id'> {
 }
 
 export const fileSchema = SchemaFactory.createForClass(File);
-export type FileDocument = File & Document;
+export type FileDocument = HydratedDocument<File>;
 export type FileModel = Model<File>;

@@ -1,9 +1,9 @@
-import { IsOptional, IsArray } from '@nestjs/class-validator';
+import { IsOptional, IsArray, IsNotEmpty } from '@nestjs/class-validator';
 import { TChangeLogCreateDTO } from '../types/changeLog.type';
 import { TCombo } from '@src/shared/types/combo.type';
 import { TLogSectionType } from '../types/logSectionType.type';
 import { TLog } from '../types/log.type';
-import { IsString } from 'class-validator';
+import { IsString } from '@nestjs/class-validator';
 
 export class CreateChangeLogDTO implements TChangeLogCreateDTO {
   @IsOptional()
@@ -21,6 +21,10 @@ export class CreateChangeLogDTO implements TChangeLogCreateDTO {
   @IsOptional()
   @IsArray()
   public logCombosDefault: (TCombo | string)[];
+  @IsArray()
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  public apiKeys: string[];
   constructor(changeLog: TChangeLogCreateDTO | undefined) {
     this.logs = changeLog?.logs;
     this.logSectionTypes = changeLog?.logSectionTypes;

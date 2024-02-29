@@ -12,9 +12,9 @@ export type TNodeEnv = 'development' | 'production' | 'test';
 export const TNodeEnvGuard = (value: unknown): value is TNodeEnv =>
   typeof value === 'string' &&
   ['development', 'production', 'test'].includes(value);
-export type TPersistence = 'memory' | 'fs' | 'mongodb';
+export type TPersistence = 'fs' | 'mongodb';
 export const TPersistenceGuard = (value: unknown): value is TPersistence =>
-  typeof value === 'string' && ['memory', 'fs', 'mongodb'].includes(value);
+  typeof value === 'string' && ['fs', 'mongodb'].includes(value);
 export type TConfig = {
   port: string | number;
   loggerLevel: TLoggerLevel;

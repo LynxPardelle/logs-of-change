@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 /* Types */
 import { TLogMediaDAO } from '@src/log/types/daoLog.type';
-import { TLogMedia } from '@src/log/types/logMedia.type';
+import { TLogMedia, asTLogMedia } from '@src/log/types/logMedia.type';
+import { TSearch } from '@src/shared/types/search.type';
 /* DTOs */
 import { CreateLogMediaDTO } from '@src/log/DTOs/createLogMedia.dto';
 import { UpdateLogMediaDTO } from '@src/log/DTOs/updateLogMedia.dto';
 /* Schemas */
+import { InjectModel } from '@nestjs/mongoose';
 import {
   LogMediaDocument,
   LogMediaModel,
 } from '@src/log/schemas/logMedia.schema';
-import { TSearch } from '@src/shared/types/search.type';
 
 @Injectable()
 export class MongoDBLogMediaDAO implements TLogMediaDAO {
@@ -22,7 +22,7 @@ export class MongoDBLogMediaDAO implements TLogMediaDAO {
     if (!newLogMedia || !newLogMedia._id) {
       throw new Error('Error creating log media');
     }
-    return newLogMedia as TLogMedia;
+    return asTLogMedia(newLogMedia);
   }
   async read(id: string): Promise<TLogMedia> {
     const logMedia: LogMediaDocument | null =
@@ -30,7 +30,7 @@ export class MongoDBLogMediaDAO implements TLogMediaDAO {
     if (!logMedia) {
       throw new Error('Log media not found');
     }
-    return logMedia as TLogMedia;
+    return asTLogMedia(logMedia);
   }
   async readAll(args?: TSearch<TLogMedia>): Promise<TLogMedia[]> {
     const logMedias: LogMediaDocument[] = await this._logMediaModel.find();
@@ -40,7 +40,7 @@ export class MongoDBLogMediaDAO implements TLogMediaDAO {
     if (!logMedias.length) {
       throw new Error("Log medias doesn't contain anything");
     }
-    return logMedias as TLogMedia[];
+    return logMedias.map(asTLogMedia);
   }
   async update(logMedia: UpdateLogMediaDTO): Promise<TLogMedia> {
     const updatedLogMedia: LogMediaDocument | null =
@@ -50,7 +50,7 @@ export class MongoDBLogMediaDAO implements TLogMediaDAO {
     if (!updatedLogMedia) {
       throw new Error('Log media not found');
     }
-    return updatedLogMedia as TLogMedia;
+    return asTLogMedia(updatedLogMedia);
   }
   async delete(id: string): Promise<TLogMedia> {
     const deletedLogMedia: LogMediaDocument | null =
@@ -58,6 +58,6 @@ export class MongoDBLogMediaDAO implements TLogMediaDAO {
     if (!deletedLogMedia) {
       throw new Error('Log media not found');
     }
-    return deletedLogMedia as TLogMedia;
+    return asTLogMedia(deletedLogMedia);
   }
 }

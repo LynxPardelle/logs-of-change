@@ -1,10 +1,11 @@
-import { Document, Model } from 'mongoose';
+import { HydratedDocument, Model } from 'mongoose';
+import * as mongoose from 'mongoose';
 import { Prop, SchemaFactory, Schema } from '@nestjs/mongoose';
 import { TCombo } from '@src/shared/types/combo.type';
 import { TLogSectionType } from '../types/logSectionType.type';
 
 @Schema()
-class LogSectionType implements Omit<TLogSectionType, '_id'> {
+export class LogSectionType implements Omit<TLogSectionType, '_id'> {
   @Prop({ required: true })
   name: string;
 
@@ -23,8 +24,13 @@ class LogSectionType implements Omit<TLogSectionType, '_id'> {
   @Prop({ default: '' })
   logSectionCssStylesDefault: string;
 
-  @Prop({ type: [String], schema: true, schemaName: 'Combo' })
-  logSectionCombosDefault: TCombo[];
+  @Prop({
+    type: [mongoose.Schema.Types.ObjectId] || [String],
+    schema: true,
+    schemaName: 'Combo',
+    ref: 'Combo',
+  })
+  logSectionCombosDefault: (TCombo | string)[];
 
   @Prop({ default: '' })
   logTextCssClassesDefault: string;
@@ -32,8 +38,13 @@ class LogSectionType implements Omit<TLogSectionType, '_id'> {
   @Prop({ default: '' })
   logTextCssStylesDefault: string;
 
-  @Prop({ type: [String], schema: true, schemaName: 'Combo' })
-  logTextCombosDefault: TCombo[];
+  @Prop({
+    type: [mongoose.Schema.Types.ObjectId] || [String],
+    schema: true,
+    schemaName: 'Combo',
+    ref: 'Combo',
+  })
+  logTextCombosDefault: (TCombo | string)[];
 
   @Prop({ default: '' })
   logMediaCssClassesDefault: string;
@@ -41,8 +52,13 @@ class LogSectionType implements Omit<TLogSectionType, '_id'> {
   @Prop({ default: '' })
   logMediaCssStylesDefault: string;
 
-  @Prop({ type: [String], schema: true, schemaName: 'Combo' })
-  logMediaCombosDefault: TCombo[];
+  @Prop({
+    type: [mongoose.Schema.Types.ObjectId] || [String],
+    schema: true,
+    schemaName: 'Combo',
+    ref: 'Combo',
+  })
+  logMediaCombosDefault: (TCombo | string)[];
 
   @Prop({ default: Date.now })
   createdAt: Date;
@@ -53,5 +69,5 @@ class LogSectionType implements Omit<TLogSectionType, '_id'> {
 
 export const logSectionTypeSchema =
   SchemaFactory.createForClass(LogSectionType);
-export type LogSectionTypeDocument = LogSectionType & Document;
+export type LogSectionTypeDocument = HydratedDocument<LogSectionType>;
 export type LogSectionTypeModel = Model<LogSectionType>;

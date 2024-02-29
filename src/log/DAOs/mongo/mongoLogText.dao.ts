@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 /* Types */
 import { TLogTextDAO } from '@src/log/types/daoLog.type';
-import { TLogText } from '@src/log/types/logText.type';
+import { TLogText, asTLogText } from '@src/log/types/logText.type';
+import { TSearch } from '@src/shared/types/search.type';
 /* DTOs */
 import { CreateLogTextDTO } from '@src/log/DTOs/createLogText.dto';
 import { UpdateLogTextDTO } from '@src/log/DTOs/updateLogText.dto';
 /* Schemas */
+import { InjectModel } from '@nestjs/mongoose';
 import { LogTextDocument, LogTextModel } from '@src/log/schemas/logText.schema';
-import { TSearch } from '@src/shared/types/search.type';
 
 @Injectable()
 export class MongoDBLogTextDAO implements TLogTextDAO {
@@ -19,7 +19,7 @@ export class MongoDBLogTextDAO implements TLogTextDAO {
     if (!newLogText || !newLogText._id) {
       throw new Error('Error creating log text');
     }
-    return newLogText as TLogText;
+    return asTLogText(newLogText);
   }
   async read(id: string): Promise<TLogText> {
     const logText: LogTextDocument | null =
@@ -27,7 +27,7 @@ export class MongoDBLogTextDAO implements TLogTextDAO {
     if (!logText) {
       throw new Error('Log text not found');
     }
-    return logText as TLogText;
+    return asTLogText(logText);
   }
   async readAll(args?: TSearch<TLogText>): Promise<TLogText[]> {
     const logTexts: LogTextDocument[] = await this._logTextModel.find();
@@ -37,7 +37,7 @@ export class MongoDBLogTextDAO implements TLogTextDAO {
     if (!logTexts.length) {
       throw new Error("Log texts doesn't contain anything");
     }
-    return logTexts as TLogText[];
+    return logTexts.map(asTLogText);
   }
   async update(logText: UpdateLogTextDTO): Promise<TLogText> {
     const updatedLogText: LogTextDocument | null =
@@ -47,7 +47,7 @@ export class MongoDBLogTextDAO implements TLogTextDAO {
     if (!updatedLogText) {
       throw new Error('Log text not found');
     }
-    return updatedLogText as TLogText;
+    return asTLogText(updatedLogText);
   }
   async delete(id: string): Promise<TLogText> {
     const deletedLogText: LogTextDocument | null =
@@ -55,6 +55,6 @@ export class MongoDBLogTextDAO implements TLogTextDAO {
     if (!deletedLogText) {
       throw new Error('Log text not found');
     }
-    return deletedLogText as TLogText;
+    return asTLogText(deletedLogText);
   }
 }

@@ -14,7 +14,7 @@ import { TCombo } from '@src/shared/types/combo.type';
 export class CreateLogSectionDTO implements TLogSectionCreateDTO {
   @IsString()
   @IsNotEmpty()
-  public type: TLogSectionType | string;
+  public type: TLogSectionType | string | undefined;
   @IsNumber()
   public priority: number;
   @IsArray()

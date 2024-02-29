@@ -8,7 +8,7 @@ export const configSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
     .default('development'),
-  PERSISTENCE: Joi.string().valid('memory', 'fs', 'mongodb').default('memory'),
+  PERSISTENCE: Joi.string().valid('fs', 'mongodb').default('fs'),
   MONGODB_URI: Joi.string().required(),
   JWT_SECRET: Joi.string().required(),
   API_KEYS: Joi.string().required(),

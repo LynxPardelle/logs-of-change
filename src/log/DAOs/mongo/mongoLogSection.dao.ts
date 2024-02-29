@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 /* Types */
 import { TLogSectionDAO } from '@src/log/types/daoLog.type';
-import { TLogSection } from '@src/log/types/logSection.type';
+import { TLogSection, asTLogSection } from '@src/log/types/logSection.type';
+import { TSearch } from '@src/shared/types/search.type';
 /* DTOs */
 import { CreateLogSectionDTO } from '@src/log/DTOs/createLogSection.dto';
 import { UpdateLogSectionDTO } from '@src/log/DTOs/updateLogSection.dto';
 /* Schemas */
+import { InjectModel } from '@nestjs/mongoose';
 import {
   LogSectionDocument,
   LogSectionModel,
 } from '@src/log/schemas/logSection.schema';
-import { TSearch } from '@src/shared/types/search.type';
 
 @Injectable()
 export class MongoDBLogSectionDAO implements TLogSectionDAO {
@@ -26,7 +26,7 @@ export class MongoDBLogSectionDAO implements TLogSectionDAO {
     if (!newLogSection || !newLogSection._id) {
       throw new Error('Error creating log section');
     }
-    return newLogSection as TLogSection;
+    return asTLogSection(newLogSection);
   }
   async read(id: string): Promise<TLogSection> {
     const logSection: LogSectionDocument | null =
@@ -34,7 +34,7 @@ export class MongoDBLogSectionDAO implements TLogSectionDAO {
     if (!logSection) {
       throw new Error('Log section not found');
     }
-    return logSection as TLogSection;
+    return asTLogSection(logSection);
   }
   async readAll(args?: TSearch<TLogSection>): Promise<TLogSection[]> {
     const logSections: LogSectionDocument[] =
@@ -45,7 +45,7 @@ export class MongoDBLogSectionDAO implements TLogSectionDAO {
     if (!logSections.length) {
       throw new Error("Log sections doesn't contain anything");
     }
-    return logSections as TLogSection[];
+    return logSections.map(asTLogSection);
   }
   async update(logSection: UpdateLogSectionDTO): Promise<TLogSection> {
     const updatedLogSection: LogSectionDocument | null =
@@ -59,7 +59,7 @@ export class MongoDBLogSectionDAO implements TLogSectionDAO {
     if (!updatedLogSection) {
       throw new Error('Log section not found');
     }
-    return updatedLogSection as TLogSection;
+    return asTLogSection(updatedLogSection);
   }
   async delete(id: string): Promise<TLogSection> {
     const deletedLogSection: LogSectionDocument | null =
@@ -67,6 +67,6 @@ export class MongoDBLogSectionDAO implements TLogSectionDAO {
     if (!deletedLogSection) {
       throw new Error('Log section not found');
     }
-    return deletedLogSection as TLogSection;
+    return asTLogSection(deletedLogSection);
   }
 }

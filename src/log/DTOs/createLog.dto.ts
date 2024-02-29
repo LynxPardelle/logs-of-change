@@ -20,10 +20,10 @@ export class CreateLogDTO implements TLogCreateDTO {
   @IsOptional()
   public combos: (TCombo | string)[];
   constructor(log: TLogCreateDTO) {
-    this.date = log.date;
-    this.logSections = log.logSections;
-    this.cssClasses = log.cssClasses;
-    this.cssStyles = log.cssStyles;
-    this.combos = log.combos;
+    this.date = log?.date;
+    this.logSections = log?.logSections;
+    this.cssClasses = log?.cssClasses;
+    this.cssStyles = log?.cssStyles;
+    this.combos = log?.combos;
   }
 }

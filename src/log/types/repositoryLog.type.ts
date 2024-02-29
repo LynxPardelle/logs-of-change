@@ -23,7 +23,7 @@ import { TSearch } from '@src/shared/types/search.type';
 
 export type TChangeLogRepository = TRepository<
   CreateChangeLogDTO,
-  undefined,
+  { projectId: string },
   undefined,
   TSearch<TChangeLog>,
   UpdateChangeLogDTO,
@@ -67,7 +67,7 @@ export type TLogSectionRepository = TRepository<
 
 export type TLogSectionTypeRepository = TRepository<
   CreateLogSectionTypeDTO,
-  { changeLogId: string },
+  undefined,
   undefined,
   TSearch<TLogSectionType>,
   UpdateLogSectionTypeDTO,

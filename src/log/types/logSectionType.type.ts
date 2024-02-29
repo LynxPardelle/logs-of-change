@@ -41,3 +41,39 @@ export type TLogSectionTypeCreateDTO = Partial<
 
 export type TLogSectionTypeUpdateDTO = TLogSectionTypeCreateDTO &
   Required<{ _id: string }>;
+
+export function isTLogSectionType(arg: any): arg is TLogSectionType {
+  return (
+    arg !== 'undefined' &&
+    arg._id !== 'undefined' &&
+    arg.name !== 'undefined' &&
+    arg.priorityDefault !== 'undefined' &&
+    arg.mediaPositionDefault !== 'undefined' &&
+    arg.textPositionDefault !== 'undefined' &&
+    arg.logSectionCssClassesDefault !== 'undefined' &&
+    arg.logSectionCssStylesDefault !== 'undefined' &&
+    arg.logSectionCombosDefault !== 'undefined' &&
+    arg.logTextCssClassesDefault !== 'undefined' &&
+    arg.logTextCssStylesDefault !== 'undefined' &&
+    arg.logTextCombosDefault !== 'undefined' &&
+    arg.logMediaCssClassesDefault !== 'undefined' &&
+    arg.logMediaCssStylesDefault !== 'undefined' &&
+    arg.logMediaCombosDefault !== 'undefined' &&
+    arg.createdAt !== 'undefined' &&
+    arg.updatedAt !== 'undefined'
+  );
+}
+export function isTLogSectionTypeArray(arg: any): arg is TLogSectionType[] {
+  return Array.isArray(arg) && arg.every((v) => isTLogSectionType(v));
+}
+export function asTLogSectionType(arg: any): TLogSectionType {
+  if (isTLogSectionType(arg)) {
+    return arg;
+  }
+  throw new Error('Invalid TLogSectionType');
+}
+export function isTLogSectionTypeCreateDTO(
+  arg: any,
+): arg is TLogSectionTypeCreateDTO {
+  return arg && arg.name && arg.priorityDefault && arg.mediaPositionDefault;
+}

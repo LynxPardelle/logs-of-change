@@ -2,18 +2,22 @@ import { Inject, Injectable } from '@nestjs/common';
 /* Types */
 import { TLogRepository } from '../types/repositoryLog.type';
 import { TRepositoryResponse } from '@src/shared/types/repositoryResponse.type';
+import { TChangeLogDAO, TLogDAO } from '../types/daoLog.type';
+import { TChangeLog } from '../types/changeLog.type';
+import { TSearch } from '@src/shared/types/search.type';
 import { TLog } from '../types/log.type';
 /* DTOs */
 import { CreateLogDTO } from '../DTOs/createLog.dto';
 import { UpdateLogDTO } from '../DTOs/updateLog.dto';
-import { TChangeLog } from '../types/changeLog.type';
-import { TChangeLogDAO, TLogDAO } from '../types/daoLog.type';
-import { TSearch } from '@src/shared/types/search.type';
+import { UpdateChangeLogDTO } from '../DTOs/updateChangeLog.dto';
+/* Services */
+import { LoggerService } from '@src/shared/services/logger.service';
 @Injectable()
 export default class LogRepository implements TLogRepository {
   constructor(
     @Inject('LogDAO') private _logDAO: TLogDAO,
     @Inject('ChangeLogDAO') private _changeLogDAO: TChangeLogDAO,
+    private _loggerService: LoggerService,
   ) {}
   /* Create */
   async create(
@@ -21,19 +25,36 @@ export default class LogRepository implements TLogRepository {
     args: { changeLogId: string },
   ): Promise<TRepositoryResponse<TLog>> {
     try {
+      this._loggerService.info(
+        `args: ${JSON.stringify(args)}`,
+        'LogRepository.create',
+      );
       if (!args.changeLogId) throw new Error('Change log id is required');
       const changeLog: TChangeLog = await this._changeLogDAO.read(
         args.changeLogId,
       );
+      this._loggerService.info(
+        `changeLog: ${JSON.stringify(changeLog)}`,
+        'LogRepository.create',
+      );
       if (!changeLog) throw new Error('Change log not found');
       let newLog: TLog = await this._logDAO.create(data);
+      this._loggerService.info(
+        `newLog: ${JSON.stringify(newLog)}`,
+        'LogRepository.create',
+      );
       if (!newLog || !newLog._id) {
         throw new Error('Error creating log');
       }
       changeLog.logs.push(newLog._id);
       changeLog.updatedAt = new Date();
-      const changeLogUpdated: TChangeLog =
-        await this._changeLogDAO.update(changeLog);
+      const changeLogUpdated: TChangeLog = await this._changeLogDAO.update(
+        new UpdateChangeLogDTO(changeLog),
+      );
+      this._loggerService.info(
+        `changeLogUpdated: ${JSON.stringify(changeLogUpdated)}`,
+        'LogRepository.create',
+      );
       if (!changeLogUpdated) throw new Error('Error updating change log');
       return {
         message: 'Log created',

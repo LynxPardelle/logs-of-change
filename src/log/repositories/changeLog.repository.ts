@@ -14,6 +14,7 @@ export default class ChangeLogRepository implements TChangeLogRepository {
   /* Create */
   async create(
     data: CreateChangeLogDTO,
+    args?: { projectId: string },
   ): Promise<TRepositoryResponse<TChangeLog>> {
     try {
       const changeLog: TChangeLog = await this._changeLogDAO.create(data);

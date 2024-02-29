@@ -17,7 +17,7 @@ export const configLoader = (): TConfig => {
       : 'development',
     persistence: TPersistenceGuard(process.env.PERSISTENCE)
       ? process.env.PERSISTENCE
-      : 'memory',
+      : 'fs',
     mongodbUri: process.env.MONGODB_URI || '',
     jwtSecret: process.env.JWT_SECRET || '',
     apiKeys: process.env.API_KEYS ? process.env.API_KEYS.split(',') : [],

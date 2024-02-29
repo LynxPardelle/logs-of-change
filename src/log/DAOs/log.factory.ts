@@ -1,16 +1,19 @@
 import { FactoryProvider, Provider } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FSLogDAO } from './fs/fsLog.dao';
-import { MemoryLogDAO } from './memory/memoryLog.dao';
 import { MongoDBLogDAO } from './mongo/mongoLog.dao';
-export const LogDaoFactory: Provider<FactoryProvider> = {
+import { TLogDAO } from '../types/daoLog.type';
+export const LogDaoFactory: Provider<FactoryProvider<TLogDAO>> = {
   provide: 'LogDAO',
-  useFactory: (configService: ConfigService) => {
+  useFactory: (
+    configService: ConfigService,
+    MongoDBLogDAO: MongoDBLogDAO,
+    FSLogDAO: FSLogDAO,
+  ) => {
     return {
       mongodb: MongoDBLogDAO,
       fs: FSLogDAO,
-      memory: MemoryLogDAO,
     }[configService.get('persistence')];
   },
-  inject: [ConfigService],
+  inject: [ConfigService, MongoDBLogDAO, FSLogDAO],
 };

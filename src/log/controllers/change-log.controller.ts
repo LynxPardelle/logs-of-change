@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 /* Types */
 import { TChangeLog } from '@src/log/types/changeLog.type';
@@ -26,17 +27,24 @@ export class ChangeLogController {
   ) {}
   @Get('author')
   author(): { [key: string]: string } {
-    console.log('ChangeLogController.author');
+    this._loggerService.info('ChangeLogController.author');
     return this._changeLogService.author();
   }
   @Post('')
   @Validate(CreateChangeLogDTO)
-  async create(@Body() data: CreateChangeLogDTO) {
+  async create(
+    @Body() data: CreateChangeLogDTO,
+    @Query('projectId') projectId: string,
+  ) {
     this._loggerService.info(
       'ChangeLogController.create',
       'ChangeLogController',
     );
-    return await this._changeLogService.create(data);
+    const args = {
+      projectId: '',
+    };
+    if (projectId) args['projectId'] = projectId;
+    return await this._changeLogService.create(data, args);
   }
 
   @Get(':id')

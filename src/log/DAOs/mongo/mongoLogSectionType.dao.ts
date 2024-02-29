@@ -1,17 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 /* Types */
 import { TLogSectionTypeDAO } from '@src/log/types/daoLog.type';
-import { TLogSectionType } from '@src/log/types/logSectionType.type';
+import {
+  TLogSectionType,
+  asTLogSectionType,
+} from '@src/log/types/logSectionType.type';
 /* DTOs */
 import { CreateLogSectionTypeDTO } from '@src/log/DTOs/createLogSectionType.dto';
 import { UpdateLogSectionTypeDTO } from '@src/log/DTOs/updateLogSectionType.dto';
+import { TSearch } from '@src/shared/types/search.type';
 /* Schemas */
+import { InjectModel } from '@nestjs/mongoose';
 import {
   LogSectionTypeDocument,
   LogSectionTypeModel,
 } from '@src/log/schemas/logSectionType.schema';
-import { TSearch } from '@src/shared/types/search.type';
 
 @Injectable()
 export class MongoDBLogSectionTypeDAO implements TLogSectionTypeDAO {
@@ -28,7 +31,7 @@ export class MongoDBLogSectionTypeDAO implements TLogSectionTypeDAO {
     if (!newLogSectionType || !newLogSectionType._id) {
       throw new Error('Error creating log section type');
     }
-    return newLogSectionType as TLogSectionType;
+    return asTLogSectionType(newLogSectionType);
   }
   async read(id: string): Promise<TLogSectionType> {
     const logSectionType: LogSectionTypeDocument | null =
@@ -36,7 +39,7 @@ export class MongoDBLogSectionTypeDAO implements TLogSectionTypeDAO {
     if (!logSectionType) {
       throw new Error('Log section type not found');
     }
-    return logSectionType as TLogSectionType;
+    return asTLogSectionType(logSectionType);
   }
   async readAll(args?: TSearch<TLogSectionType>): Promise<TLogSectionType[]> {
     const logSectionTypes: LogSectionTypeDocument[] =
@@ -47,7 +50,7 @@ export class MongoDBLogSectionTypeDAO implements TLogSectionTypeDAO {
     if (!logSectionTypes.length) {
       throw new Error("Log section types doesn't contain anything");
     }
-    return logSectionTypes as TLogSectionType[];
+    return logSectionTypes.map(asTLogSectionType);
   }
   async update(
     logSectionType: UpdateLogSectionTypeDTO,
@@ -63,7 +66,7 @@ export class MongoDBLogSectionTypeDAO implements TLogSectionTypeDAO {
     if (!updatedLogSectionType) {
       throw new Error('Log section type not found');
     }
-    return updatedLogSectionType as TLogSectionType;
+    return asTLogSectionType(updatedLogSectionType);
   }
   async delete(id: string): Promise<TLogSectionType> {
     const deletedLogSectionType: LogSectionTypeDocument | null =
@@ -71,6 +74,6 @@ export class MongoDBLogSectionTypeDAO implements TLogSectionTypeDAO {
     if (!deletedLogSectionType) {
       throw new Error('Log section type not found');
     }
-    return deletedLogSectionType as TLogSectionType;
+    return asTLogSectionType(deletedLogSectionType);
   }
 }

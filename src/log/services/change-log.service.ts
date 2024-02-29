@@ -5,10 +5,10 @@ import ChangeLogRepository from '@src/log/repositories/changeLog.repository';
 import { TChangeLog } from '@src/log/types/changeLog.type';
 import { TChangeLogRepository } from '@src/log/types/repositoryLog.type';
 import { TRepositoryResponse } from '@src/shared/types/repositoryResponse.type';
+import { TSearch } from '@src/shared/types/search.type';
 /* DTOs */
 import { CreateChangeLogDTO } from '@src/log/DTOs/createChangeLog.dto';
 import { UpdateChangeLogDTO } from '@src/log/DTOs/updateChangeLog.dto';
-import { TSearch } from '@src/shared/types/search.type';
 
 @Injectable()
 export class ChangeLogService implements TChangeLogRepository {
@@ -23,8 +23,9 @@ export class ChangeLogService implements TChangeLogRepository {
   /* Create */
   async create(
     data: CreateChangeLogDTO,
+    args?: { projectId: string },
   ): Promise<TRepositoryResponse<TChangeLog>> {
-    return await this._changeLogRepository.create(data);
+    return await this._changeLogRepository.create(data, args);
   }
   /* Read */
   async read(id: string): Promise<TRepositoryResponse<TChangeLog>> {

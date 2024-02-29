@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 /* Services */
 import { LoggerService } from './services/logger.service';
 /* Schemas */
 import { comboSchema } from './schemas/combo.schema';
 import { fileSchema } from './schemas/file.schema';
-
+@Global()
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -18,6 +18,7 @@ import { fileSchema } from './schemas/file.schema';
         schema: fileSchema,
       },
     ]),
+    SharedModule,
   ],
   controllers: [],
   providers: [LoggerService],
