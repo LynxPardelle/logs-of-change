@@ -56,7 +56,7 @@
     "@nestjs/schematics": "^10.1.1",
     "@nestjs/testing": "^10.3.3",
     "@swc/cli": "^0.3.10",
-    "@swc/core": "^1.4.5",
+    "@swc/core": "^1.4.8",
     "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.2",
     "@types/node": "^20.11.24",
