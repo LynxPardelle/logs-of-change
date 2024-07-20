@@ -1,4 +1,4 @@
-import { AsyncModelFactory, getModelToken } from '@nestjs/mongoose';
+import { AsyncModelFactory } from '@nestjs/mongoose';
 import { Model, ObjectId } from 'mongoose';
 /* Types */
 import { TLog, asTLog } from '../types/log.type';

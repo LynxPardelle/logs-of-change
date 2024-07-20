@@ -4,7 +4,6 @@ import {
   TNodeEnvGuard,
   TPersistenceGuard,
 } from './config.type';
-import { TLoggerLevel } from 'src/config/config.type';
 
 export const configLoader = (): TConfig => {
   return {
