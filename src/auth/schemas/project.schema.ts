@@ -13,7 +13,7 @@ export class Project implements Omit<TProject, '_id'> {
 
   @Prop({
     default: [],
-    type: [mongoose.Schema.Types.ObjectId] || [String],
+    type: [mongoose.Schema.Types.ObjectId || String],
     ref: 'User',
   })
   members: (TUser | string)[];

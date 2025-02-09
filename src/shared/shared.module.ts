@@ -18,7 +18,6 @@ import { fileSchema } from './schemas/file.schema';
         schema: fileSchema,
       },
     ]),
-    SharedModule,
   ],
   controllers: [],
   providers: [LoggerService],
