@@ -60,3 +60,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # nyc
 .nyc_output
+
+# Local generated project-summary draft
+/README_TEST.md
