@@ -1,3 +1,17 @@
+# Logs of Change
+
+Base del producto para revisar y aprobar entregas de software. El flujo de aprobación se desarrollará por etapas. La rama inicial contiene el estado de conexión en Angular y el endpoint de salud en AWS SAM.
+
+- [Producto y criterios de aceptación](docs/product/aprobacion-entregas.md)
+- [Arquitectura, inventario NestJS y migración](docs/architecture/ARCHITECTURE.md)
+- [Decisión de migración](docs/architecture/adr/0001-migracion-incremental.md)
+- [Plan de implementación](plan/architecture-serverless-product-1.md)
+- [Arranque y pruebas de la consola](web/README.md)
+
+Desde la raíz puedes probar el handler con `node --test serverless/test/health.test.mjs` y la plantilla con `cfn-lint -r us-east-1 -t serverless/template.yaml`. El arranque local de la consola usa Node.js y el lockfile de `web/`.
+
+## Guía original de NestJS
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
 </p>

@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Logs of Change product API foundation.
+
+Resources:
+  ProductApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/health/
+      Handler: index.handler
+      Runtime: nodejs24.x
+      Architectures:
+        - arm64
+      MemorySize: 128
+      Timeout: 5
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref HealthLogGroup
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ProductApi
+            Method: GET
+            Path: /api/v1/health
+            PayloadFormatVersion: '2.0'
+
+  HealthLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}/health'
+      RetentionInDays: 14
+
+Outputs:
+  HealthUrl:
+    Description: Public health endpoint.
+    Value: !Sub 'https://${ProductApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/api/v1/health'
