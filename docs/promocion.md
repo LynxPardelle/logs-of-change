@@ -13,3 +13,7 @@ La validación de origen se ejecuta con la definición del workflow del destino.
 Si aparece una corrección de código o de infraestructura en testing o main, impleméntala en development y sigue la cadena de promoción. Al actualizar el PR, GitHub vuelve a validar su origen. Para repetir la comprobación se puede volver a ejecutar el trabajo del PR desde la pestaña Checks.
 
 [Reglas de repositorio](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets) · [Ambientes de GitHub](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments)
+
+## Comprobar los controles
+
+En la vista del pull request, verifica el resultado zoo/promotion/testing o zoo/promotion/production según el destino. GitHub muestra la regla en Settings → Rules → Rulesets y la rama permitida para cada ambiente en Settings → Environments.
