@@ -1,0 +1,100 @@
+name: Cadena de promoción
+
+'on':
+  pull_request_target:
+    branches: [testing, main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+  push:
+    branches: [testing, main]
+  workflow_dispatch:
+
+permissions:
+  pull-requests: read
+  statuses: write
+
+jobs:
+  validate:
+    name: Validar origen de la promoción
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Registrar el resultado del PR en su commit de prueba
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import time
+          import urllib.parse
+          import urllib.request
+
+          destination = {
+              "testing": ("development", "zoo/promotion/testing"),
+              "main": ("testing", "zoo/promotion/production"),
+          }
+          token = os.environ["GH_TOKEN"]
+          repository = os.environ["GITHUB_REPOSITORY"]
+          api_base = os.environ["GITHUB_API_URL"] + "/repos/" + repository
+          run_url = f'{os.environ["GITHUB_SERVER_URL"]}/{repository}/actions/runs/{os.environ["GITHUB_RUN_ID"]}'
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as file:
+              event = json.load(file)
+
+          def api(path, body=None):
+              data = json.dumps(body).encode() if body is not None else None
+              request = urllib.request.Request(api_base + path, data=data, headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": "Bearer " + token,
+                  "Content-Type": "application/json",
+              })
+              with urllib.request.urlopen(request, timeout=15) as response:
+                  return json.load(response)
+
+          def validate(number):
+              for attempt in range(12):
+                  pr = api(f"/pulls/{number}")
+                  base = pr["base"]["ref"]
+                  if pr["state"] != "open" or base not in destination:
+                      return True
+                  if pr["mergeable"] is not None:
+                      break
+                  time.sleep(2)
+              sha = pr.get("merge_commit_sha") or ""
+              if pr["mergeable"] is not True or not re.fullmatch(r"[0-9a-f]{40}", sha):
+                  print(f"PR {number}: GitHub no tiene un merge de prueba utilizable.")
+                  return False
+
+              expected, context = destination[base]
+              source_repo = pr["head"]["repo"]
+              valid = (
+                  source_repo is not None
+                  and source_repo["id"] == pr["base"]["repo"]["id"]
+                  and pr["head"]["ref"] == expected
+              )
+              api(f"/statuses/{sha}", {
+                  "state": "success" if valid else "failure",
+                  "context": context,
+                  "description": f"Origen autorizado: {expected}" if valid else f"Este destino requiere {expected} del mismo repositorio",
+                  "target_url": run_url,
+              })
+              print(f"PR {number}: {'origen autorizado' if valid else 'origen rechazado'}.")
+              return valid
+
+          if os.environ["GITHUB_EVENT_NAME"] == "pull_request_target":
+              if not validate(event["number"]):
+                  raise SystemExit(1)
+          else:
+              branch = os.environ["GITHUB_REF_NAME"]
+              if branch in destination:
+                  for page in range(1, 11):
+                      params = urllib.parse.urlencode({
+                          "state": "open", "base": branch, "per_page": 100, "page": page,
+                      })
+                      requests = api("/pulls?" + params)
+                      for pr in requests:
+                          validate(pr["number"])
+                      if len(requests) < 100:
+                          break
+          PY
