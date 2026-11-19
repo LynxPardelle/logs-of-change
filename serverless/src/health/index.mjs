@@ -5,6 +5,6 @@ export async function handler() {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
     },
-    body: JSON.stringify({ status: 'ok', service: 'logs-of-change' }),
+    body: JSON.stringify({ status: 'ok', service: 'logsofchange' }),
   };
 }

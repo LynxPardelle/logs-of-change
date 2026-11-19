@@ -22,7 +22,7 @@ En la tabla, `B` representa `/api/v1/orgs/{orgId}/projects/{projectId}/releases`
 
 | Método y ruta | Entrada | Respuesta |
 | --- | --- | --- |
-| `GET /api/v1/health` | Pública. | `{ "status": "ok", "service": "logs-of-change" }`. |
+| `GET /api/v1/health` | Pública. | `{ "status": "ok", "service": "logsofchange" }`. |
 | `GET /api/v1/config` | Pública; sólo configuración del cliente. | `{ product, environment, auth: { issuer, clientId, domain, redirectUri }, services }`. Ningún secreto. |
 | `GET /api/v1/identity/me` | Token de persona. | `{ sub, memberships: [{ orgId, orgName, projects: [{ projectId, name, role }] }] }`. |
 | `GET B` | `cursor` opcional de la página anterior; `limit` de 1 a 50, por defecto 20. | `{ releases: Release[], nextCursor }`; no recorre otras particiones. |
@@ -88,4 +88,4 @@ La herramienta [de migración offline](../../../serverless/scripts/migration/REA
 
 ## Identidad y compatibilidad de evidencia
 
-Las revisiones nuevas usan logs-of-change.revision.v1 y las actas nuevas logs-of-change.acta.v1. El verificador también admite hitoclaro.acta.v1 para evidencia ya exportada. El cambio de marca no reescribe manifiestos ni hashes anteriores. Los prefijos físicos AWS no forman parte de la autorización del cliente.
+Las revisiones nuevas usan logsofchange.revision.v1 y las actas nuevas logsofchange.acta.v1. El verificador también admite logs-of-change.acta.v1 para evidencia ya exportada. El cambio de marca no reescribe manifiestos ni hashes anteriores. Los prefijos físicos AWS no forman parte de la autorización del cliente.

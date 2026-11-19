@@ -31,7 +31,7 @@ jobs:
       - run: cfn-lint -r us-east-1 -t serverless/template.yaml serverless/services/identity/template.yaml serverless/services/releases/template.yaml serverless/services/evidence/template.yaml
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: logs-of-change-lambda-packages
+          name: logsofchange-lambda-packages
           include-hidden-files: true
           path: serverless/.build/
           if-no-files-found: error

@@ -1,5 +1,5 @@
-// Read-only AWS discovery for a clean remote checkout. Resource names retain the
-// original deployment prefix; changing the product brand must not replace data.
+// Read-only discovery of the active Logs of Change environment. Legacy resource
+// migration is handled separately; this reader never falls back to another stack.
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, realpath, rename, rm, writeFile } from 'node:fs/promises';
@@ -7,7 +7,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const serviceRoot = fileURLToPath(new URL('../', import.meta.url));
-const domains = Object.freeze({ development: 'dev.hitoclaro.lynxpardelle.com', testing: 'test.hitoclaro.lynxpardelle.com', production: 'hitoclaro.lynxpardelle.com' });
+const region = 'us-east-1';
+const domains = Object.freeze({ development: 'dev.logsofchange.lynxpardelle.com', testing: 'test.logsofchange.lynxpardelle.com', production: 'logsofchange.lynxpardelle.com' });
 const required = Object.freeze({
   identity: ['UserPoolId', 'UserPoolClientId', 'Issuer', 'AuthDomain', 'AccessTableName', 'AccessTableArn', 'ApiEndpoint', 'ApiDomainName'],
   releases: ['ApiEndpoint', 'ApiDomainName', 'ReleasesTableName', 'ReleasesTableArn', 'EvidenceBucketName'],
@@ -45,7 +46,10 @@ async function runAwsCli(args) {
 
 function publicSnapshot(environment, values) {
   validateEnvironment(environment);
-  const snapshot = { environment, domain: domains[environment] };
+  const stackNames = Object.fromEntries(Object.keys(required).map((service) => [service, `logsofchange-${environment}-${service}`]));
+  if (values.region !== undefined && values.region !== region) throw new Error('Unexpected environment region.');
+  if (values.stackNames !== undefined && Object.entries(stackNames).some(([service, name]) => values.stackNames[service] !== name)) throw new Error('Unexpected environment stack names.');
+  const snapshot = { environment, region, domain: domains[environment], stackNames };
   for (const [service, keys] of Object.entries(required)) {
     snapshot[service] = {};
     for (const key of keys) {
@@ -74,7 +78,7 @@ function publicSnapshot(environment, values) {
 export async function readEnvironment(environment = 'development', { runAws = runAwsCli } = {}) {
   validateEnvironment(environment);
   const entries = await Promise.all(Object.keys(required).map(async (service) => {
-    const stackName = `hitoclaro-${environment}-${service}`;
+    const stackName = `logsofchange-${environment}-${service}`;
     const response = JSON.parse(await runAws(['cloudformation', 'describe-stacks', '--stack-name', stackName, '--region', 'us-east-1', '--output', 'json']));
     const stack = response.Stacks?.[0];
     if (response.Stacks?.length !== 1 || stack.StackName !== stackName || !['CREATE_COMPLETE', 'UPDATE_COMPLETE', 'UPDATE_ROLLBACK_COMPLETE'].includes(stack.StackStatus)) {

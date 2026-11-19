@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "logs-of-change-web": {
+    "logsofchange-web": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -27,7 +27,7 @@
             "ssr": {
               "entry": "src/server.ts"
             },
-            "outputPath": "dist/logs-of-change-web"
+            "outputPath": "dist/logsofchange-web"
           },
           "configurations": {
             "production": {
@@ -60,10 +60,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "logs-of-change-web:build:production"
+              "buildTarget": "logsofchange-web:build:production"
             },
             "development": {
-              "buildTarget": "logs-of-change-web:build:development"
+              "buildTarget": "logsofchange-web:build:development"
             }
           },
           "defaultConfiguration": "development"

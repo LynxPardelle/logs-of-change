@@ -17,7 +17,7 @@ test('verification detects modified evidence', () => {
 
 test('restoring the brand preserves verification of previously exported actas', () => {
   const previous = validActa();
-  previous.schema = 'hitoclaro.acta.v1';
+  previous.schema = 'logs-of-change.acta.v1';
   assert.equal(verifyActa(previous), true);
   previous.schema = 'unrecognized.acta.v1';
   assert.equal(verifyActa(previous), false);
@@ -32,7 +32,7 @@ test('evidence requires a verified subject and never accepts unbounded paths', a
 function validActa(orgId = 'agency') {
   const manifest = { orgId, projectId: 'pilot', releaseId: 'delivery', revision: 1, title: 'Milestone' };
   const digest = createHash('sha256').update(canonical(manifest)).digest('hex');
-  return { schema: 'logs-of-change.acta.v1', orgId, projectId: 'pilot', releaseId: 'delivery', revision: { number: 1, manifest, digest }, decision: { revision: 1, manifestDigest: digest, actor: 'reviewer', outcome: 'accepted', decidedAt: '2026-11-19T00:00:00.000Z' } };
+  return { schema: 'logsofchange.acta.v1', orgId, projectId: 'pilot', releaseId: 'delivery', revision: { number: 1, manifest, digest }, decision: { revision: 1, manifestDigest: digest, actor: 'reviewer', outcome: 'accepted', decidedAt: '2026-11-19T00:00:00.000Z' } };
 }
 
 test('acta verification binds route identifiers, revision and decision to the hashed content', () => {

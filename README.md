@@ -2,9 +2,9 @@
 
 Revisión de entregas y aprobaciones con evidencia. Una agencia presenta un hito de software; una persona del cliente acepta su revisión exacta o pide cambios. El historial conserva contenido, actor, fecha y digest de cada revisión decidida.
 
-El nombre conserva la referencia personal a **Wind of Change**, de Scorpions. El guiño editorial es «Que cada cambio encuentre su rumbo», con textos propios sobre cambios, versiones y nuevos caminos. Los paquetes usan `logs-of-change`; la marca provisional HitoClaro queda como antecedente técnico, no como nombre del producto.
+El nombre conserva la referencia personal a **Wind of Change**, de Scorpions. El guiño editorial es «Que cada cambio encuentre su rumbo», con textos propios sobre cambios, versiones y nuevos caminos. El identificador técnico de paquetes, servicios y recursos es `logsofchange`.
 
-El entorno AWS existente conserva temporalmente sus nombres físicos y su URL `dev.hitoclaro.lynxpardelle.com` para mantener usuarios, datos y certificados. Estos identificadores no se renombran mediante un reemplazo global. [Decisión de continuidad](docs/architecture/adr/0003-logs-of-change-identidad.md).
+El entorno de desarrollo utiliza nombres definitivos logsofchange y un dominio propio bajo lynxpardelle.com. La publicación crea recursos nuevos, verifica el flujo y retira el entorno vacío anterior. [Decisión de publicación](docs/architecture/adr/0004-logsofchange-development.md).
 
 ## Arquitectura
 
@@ -12,11 +12,11 @@ Angular 22 con NgRx SignalStore y SSR en Lambda Node.js 24 ARM64, detrás de Clo
 
 | Entorno | Rama de promoción | Dirección |
 | --- | --- | --- |
-| Desarrollo | development | https://dev.hitoclaro.lynxpardelle.com |
-| Pruebas | testing | https://test.hitoclaro.lynxpardelle.com |
-| Producción | main | https://hitoclaro.lynxpardelle.com |
+| Desarrollo | development | https://dev.logsofchange.lynxpardelle.com |
+| Pruebas | testing | https://test.logsofchange.lynxpardelle.com |
+| Producción | main | https://logsofchange.lynxpardelle.com |
 
-Desarrollo está desplegado; pruebas y producción son configuración prevista con el prefijo técnico existente. Los resultados anteriores constan en [verificación histórica](docs/operations/verification-2026-11-19.md). Promoción: **development → testing → main**. Para continuar desde otra máquina o sesión, consultar [REMOTE_HANDOFF.md](REMOTE_HANDOFF.md).
+Desarrollo se publica desde la rama development; pruebas y producción son configuración prevista y no se elevan en esta entrega. Los resultados anteriores constan en [verificación histórica](docs/operations/verification-2026-11-19.md). Promoción: **development → testing → main**. Para continuar desde otra máquina o sesión, consultar [REMOTE_HANDOFF.md](REMOTE_HANDOFF.md).
 
 ## Arranque y comprobaciones
 
@@ -62,4 +62,4 @@ La migración offline admite únicamente un JSON explícito, elimina campos sens
 
 ## Backend heredado
 
-`src/` conserva NestJS/Fastify y los contratos de changelog del origen. MongoDB y los DAO de archivos se mantienen como fuentes de migración, sin mezclar sus credenciales con la API nueva. Sus incompatibilidades preexistentes de dependencias están documentadas en arquitectura. Docker usa ahora los nombres `logs-of-change-dev` y `logs-of-change-production`; el producto nuevo no depende de esos contenedores.
+`src/` conserva NestJS/Fastify y los contratos de changelog del origen. MongoDB y los DAO de archivos se mantienen como fuentes de migración, sin mezclar sus credenciales con la API nueva. Sus incompatibilidades preexistentes de dependencias están documentadas en arquitectura. Docker usa ahora los nombres `logsofchange-dev` y `logsofchange-production`; el producto nuevo no depende de esos contenedores.

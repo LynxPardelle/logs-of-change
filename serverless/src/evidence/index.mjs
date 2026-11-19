@@ -10,7 +10,7 @@ export function verifyActa(acta) {
   const revision = acta?.revision;
   const manifest = revision?.manifest;
   const decision = acta?.decision;
-  return Boolean(['logs-of-change.acta.v1', 'hitoclaro.acta.v1'].includes(acta?.schema) && manifest && revision.digest && decision &&
+  return Boolean(['logsofchange.acta.v1', 'logs-of-change.acta.v1'].includes(acta?.schema) && manifest && revision.digest && decision &&
     acta.orgId === manifest.orgId && acta.projectId === manifest.projectId && acta.releaseId === manifest.releaseId &&
     revision.number === manifest.revision && decision.revision === revision.number && decision.manifestDigest === revision.digest &&
     ['accepted', 'changes_requested'].includes(decision.outcome) && typeof decision.actor === 'string' && decision.actor.length > 0 &&
@@ -34,10 +34,10 @@ export function createEvidenceHandler({ releasesOrigin, fetcher = fetch }) {
       if (!response.ok) return json([401, 403, 404].includes(response.status) ? response.status : 503, { error: { code: 'EVIDENCE_UNAVAILABLE', message: 'No se pudo consultar la revisión autorizada.' } });
       const { revision, decision } = await response.json();
       if (!revision || !decision) return json(409, { error: { code: 'DECISION_REQUIRED', message: 'La revisión aún no tiene una decisión.' } });
-      const acta = { schema: 'logs-of-change.acta.v1', product: 'Logs of Change', orgId: org, projectId: project, releaseId: release, revision, decision, exportedAt: new Date().toISOString(), integrity: { algorithm: 'SHA-256', canonicalization: 'sorted-object-keys-json-v1', scope: 'revision.manifest' } };
+      const acta = { schema: 'logsofchange.acta.v1', product: 'Logs of Change', orgId: org, projectId: project, releaseId: release, revision, decision, exportedAt: new Date().toISOString(), integrity: { algorithm: 'SHA-256', canonicalization: 'sorted-object-keys-json-v1', scope: 'revision.manifest' } };
       if (!verifyActa(acta)) return json(502, { error: { code: 'INTEGRITY_MISMATCH', message: 'La integridad de la revisión no pudo verificarse.' } });
       const result = json(200, acta);
-      result.headers['content-disposition'] = `attachment; filename="logs-of-change-${release}-r${revisionNumber}.json"`;
+      result.headers['content-disposition'] = `attachment; filename="logsofchange-${release}-r${revisionNumber}.json"`;
       return result;
     } catch {
       return json(503, { error: { code: 'EVIDENCE_UNAVAILABLE', message: 'La evidencia no está disponible. Intenta nuevamente.' } });

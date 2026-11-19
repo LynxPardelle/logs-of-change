@@ -19,7 +19,7 @@ describe('ApiHealthStore', () => {
     expect(store.status()).toBe('checking');
     http.expectOne({ method: 'GET', url: '/api/v1/health' }).flush({
       status: 'ok',
-      service: 'logs-of-change',
+      service: 'logsofchange',
     });
     expect(store.status()).toBe('connected');
   });
@@ -33,7 +33,7 @@ describe('ApiHealthStore', () => {
 
     store.check();
     expect(store.status()).toBe('checking');
-    http.expectOne('/api/v1/health').flush({ status: 'ok', service: 'logs-of-change' });
+    http.expectOne('/api/v1/health').flush({ status: 'ok', service: 'logsofchange' });
     expect(store.status()).toBe('connected');
   });
 

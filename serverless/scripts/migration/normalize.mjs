@@ -189,7 +189,7 @@ export function normalizeExport(input) {
     if (collection === 'projects') continue;
     for (const row of rows) if (!reachable.has(`${collection}/${row.id}`)) issue('UNREACHABLE_RECORD', collection, row.id);
   }
-  const report = { schemaVersion: 'logs-of-change-migration-report-v1', mode: 'validate-only', valid: issues.length === 0, source, mapping, counts, issues, projection: null };
+  const report = { schemaVersion: 'logsofchange-migration-report-v1', mode: 'validate-only', valid: issues.length === 0, source, mapping, counts, issues, projection: null };
   if (issues.length) return report;
 
   const sourceDigest = digest({ source, mapping, records });
@@ -213,10 +213,10 @@ export function normalizeExport(input) {
       provenance: { ...source, legacyProjectId: project.id, legacyChangeLogId: changeLog.id, legacyLogId: log.id, sourceDigest },
     };
   });
-  report.projection = { schemaVersion: 'logs-of-change-historical-v1', source, mapping, sourceDigest, project, records, history };
+  report.projection = { schemaVersion: 'logsofchange-historical-v1', source, mapping, sourceDigest, project, records, history };
   report.projectionDigest = digest(report.projection);
   report.digestAlgorithm = 'sha256';
-  report.canonicalization = 'logs-of-change-canonical-json-v1';
+  report.canonicalization = 'logsofchange-canonical-json-v1';
   return report;
 }
 
@@ -233,5 +233,5 @@ export function compareProjection(expected, actual) {
   walk(expected, actual, '');
   const expectedDigest = digest(expected);
   const actualDigest = digest(actual);
-  return { schemaVersion: 'logs-of-change-migration-parity-v1', matches: expectedDigest === actualDigest, expectedDigest, actualDigest, differences };
+  return { schemaVersion: 'logsofchange-migration-parity-v1', matches: expectedDigest === actualDigest, expectedDigest, actualDigest, differences };
 }

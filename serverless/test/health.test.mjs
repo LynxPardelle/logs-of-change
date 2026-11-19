@@ -13,6 +13,6 @@ test('returns the public API health contract', async () => {
   assert.equal(response.headers['cache-control'], 'no-store');
   assert.deepEqual(JSON.parse(response.body), {
     status: 'ok',
-    service: 'logs-of-change',
+    service: 'logsofchange',
   });
 });

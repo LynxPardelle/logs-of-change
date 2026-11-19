@@ -2,7 +2,7 @@
 
 ## Servicios y límites
 
-La arquitectura es de **microservicios serverless en AWS**, con Angular servido mediante Lambda SSR. Sigue el patrón local del portafolio, usando servicios, dominios y datos propios de Logs of Change. [ADR de arquitectura](adr/0002-hitoclaro-microservicios.md) y [decisión de identidad vigente](adr/0003-logs-of-change-identidad.md).
+La arquitectura es de **microservicios serverless en AWS**, con Angular servido mediante Lambda SSR. Sigue el patrón local del portafolio, usando servicios, dominios y datos propios de Logs of Change. [ADR de arquitectura](adr/0002-microservicios-serverless.md) y [decisión de identidad vigente](adr/0003-logs-of-change-identidad.md).
 
 | Servicio / stack | Responsabilidad y propiedad | Implementación |
 | --- | --- | --- |
@@ -71,6 +71,6 @@ Antes de un corte: elegir proyecto y organización verificados, exportar en sól
 
 ## Entornos y operación
 
-Los nombres físicos AWS y dominios hitoclaro se conservan por compatibilidad operacional; la marca y los paquetes son Logs of Change. Región: us-east-1. Desarrollo: `dev.hitoclaro.lynxpardelle.com`; pruebas: `test.hitoclaro.lynxpardelle.com`; producción: `hitoclaro.lynxpardelle.com`. Certificados específicos cubren cada hostname y los registros son propios. Los stacks aíslan tablas, usuarios, buckets, API y logs por entorno. Promoción: development → testing → main. El código sigue en la rama de arquitectura hasta revisión; producción requiere aprobación explícita.
+Los nombres físicos AWS, dominios, paquetes y contratos nuevos usan logsofchange; la marca es Logs of Change. Región: us-east-1. Desarrollo: `dev.logsofchange.lynxpardelle.com`; pruebas: `test.logsofchange.lynxpardelle.com`; producción: `logsofchange.lynxpardelle.com`. Certificados específicos cubren cada hostname y los registros son propios. Los stacks aíslan tablas, usuarios, buckets, API y logs por entorno. Promoción: development → testing → main. El código se integra y publica en development; testing y main no se modifican. Producción requiere aprobación explícita.
 
 [Plan](../../plan/architecture-serverless-product-1.md) · [Contrato v1](contracts/releases-v1.md) · [Runbook](../operations/runbook.md) · [Verificación](../operations/verification-2026-11-19.md).

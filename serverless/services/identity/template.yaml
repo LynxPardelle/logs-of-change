@@ -15,7 +15,7 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      UserPoolName: !Sub 'hitoclaro-${Environment}'
+      UserPoolName: !Sub 'logsofchange-${Environment}'
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: true
       Policies:
@@ -30,7 +30,7 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       UserPoolId: !Ref UserPool
-      ClientName: !Sub 'hitoclaro-${Environment}-web'
+      ClientName: !Sub 'logsofchange-${Environment}-web'
       GenerateSecret: false
       PreventUserExistenceErrors: ENABLED
       EnableTokenRevocation: true
@@ -52,7 +52,7 @@ Resources:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
       UserPoolId: !Ref UserPool
-      Domain: !Sub 'hitoclaro-${Environment}-${AWS::AccountId}'
+      Domain: !Sub 'logsofchange-${Environment}-${AWS::AccountId}'
   AccessTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
@@ -116,9 +116,15 @@ Resources:
   IdentityLogs:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/hitoclaro/${Environment}/identity'
+      LogGroupName: !Sub '/logsofchange/${Environment}/identity'
       RetentionInDays: 14
 Outputs:
+  StackName:
+    Value: !Ref AWS::StackName
+  Region:
+    Value: !Ref AWS::Region
+  EnvironmentName:
+    Value: !Ref Environment
   UserPoolId: {Value: !Ref UserPool}
   UserPoolClientId: {Value: !Ref UserPoolClient}
   Issuer: {Value: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'}

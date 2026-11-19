@@ -3,10 +3,10 @@
 ## Punto de trabajo
 
 - Repositorio: https://github.com/LynxPardelle/logs-of-change
-- Rama de continuación: `architecture/serverless-product-foundation`.
-- Producto: **Logs of Change**. HitoClaro fue el nombre provisional; sólo permanece en identificadores físicos AWS y evidencia histórica.
+- Rama de continuación: `development`.
+- Producto: **Logs of Change**. El identificador técnico de todos los componentes activos es logsofchange.
 - Integración: primero revisar contra **development**, después promover a **testing** y finalmente a **main**. No integrar esta rama de arquitectura directamente a main.
-- CI: workflow `Logs of Change validation`, archivo `.github/workflows/logs-of-change-validation.yml`. Comprobar la ejecución asociada al HEAD remoto; no basta con una ejecución verde de un commit anterior.
+- CI: workflow `Logs of Change validation`, archivo `.github/workflows/logsofchange-validation.yml`. Comprobar la ejecución asociada al HEAD remoto; no basta con una ejecución verde de un commit anterior.
 
 El árbol incluye Angular SSR, microservicios SAM de identidad/entregas/evidencia, migración offline, pruebas y herramientas operativas. El backend NestJS de `src/` conserva su contrato e incompatibilidades documentadas; no necesita instalarse para trabajar en el producto serverless.
 
@@ -17,7 +17,7 @@ En un checkout nuevo:
 ```sh
 git clone https://github.com/LynxPardelle/logs-of-change.git
 cd logs-of-change
-git switch --track origin/architecture/serverless-product-foundation
+git switch --track origin/development
 git status --short --branch
 ```
 
@@ -25,7 +25,7 @@ En un checkout existente, revisar primero el estado local y conservar cualquier 
 
 ```sh
 git fetch origin
-git switch architecture/serverless-product-foundation
+git switch development
 git pull --ff-only
 git status --short --branch
 ```
@@ -56,11 +56,9 @@ En local puede usarse un virtualenv bajo `serverless/.venv/`, ignorado en Git. E
 
 ## Inspeccionar el entorno existente sin redesplegar
 
-Dirección técnica conservada: https://dev.hitoclaro.lynxpardelle.com
+Dirección de desarrollo: https://dev.logsofchange.lynxpardelle.com
 
-Esta entrega publica el código y su CI en la rama, sin desplegar una revisión nueva en AWS ni promover ramas. El entorno existente procede de la verificación histórica con la marca provisional HitoClaro. La vuelta a Logs of Change está en este código; antes de ejecutar el smoke de esta revisión contra AWS, publicar frontend y APIs de esta misma revisión en el entorno que corresponda. Un CI verde valida los artefactos, no acredita que ese commit ya esté desplegado.
-
-Región us-east-1. Stacks físicos: `hitoclaro-development-identity`, `-releases`, `-evidence`, `-edge` y `-artifacts`. No sustituir el prefijo mediante un reemplazo de marca.
+Esta entrega integra development y publica el entorno logsofchange. Testing y main permanecen sin cambios. Los stacks son logsofchange-development-identity, -releases, -evidence, -edge y -artifacts, en us-east-1. El informe de publicación es docs/operations/development-logsofchange.md.
 
 Con AWS CLI ya autenticado, el siguiente comando sólo lee CloudFormation y recupera parámetros públicos; no crea ni actualiza recursos:
 
@@ -77,11 +75,11 @@ La segunda variante escribe únicamente `serverless/.deployment/development/outp
 
 El smoke usa identidades y datos sintéticos propios, con mensajes de creación suprimidos, y los limpia al terminar. Es una prueba que escribe exclusivamente en el ámbito sintético; no equivale a la aceptación de un piloto real. Requiere un Chrome/Edge instalado; en Linux se puede indicar `LOGS_OF_CHANGE_BROWSER_PATH`.
 
-Los comandos siguientes presuponen que ese entorno ya ejecuta la misma revisión de frontend y servicios; no ejecutarlos como si el despliegue anterior hubiese cambiado de marca al hacer push.
+Los comandos siguientes deben ejecutarse contra una revisión coherente de frontend y servicios; comprobar el informe de publicación y el estado de los stacks.
 
 ```sh
 node serverless/scripts/smoke.mjs --environment=development
-node serverless/scripts/qa-web.mjs https://dev.hitoclaro.lynxpardelle.com
+node serverless/scripts/qa-web.mjs https://dev.logsofchange.lynxpardelle.com
 ```
 
 `--restore=true` añade recuperación en una tabla nueva temporal y posterior limpieza. Las contraseñas y tokens del smoke sólo viven en memoria. No abrir `.env`, credenciales, notas de reuniones ni vaults para preparar este repositorio.

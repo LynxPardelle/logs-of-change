@@ -7,7 +7,7 @@ const serverless = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const workspace = resolve(serverless, '..');
 
 export async function packageWeb() {
-  const output = join(workspace, 'web', 'dist', 'logs-of-change-web');
+  const output = join(workspace, 'web', 'dist', 'logsofchange-web');
   const stage = resolve(serverless, '.build', 'web');
   // Refuse to remove any directory other than this script's own generated artifact.
   if (stage !== join(serverless, '.build', 'web')) throw new Error('Unexpected artifact directory');
@@ -22,7 +22,7 @@ export async function packageWeb() {
   const adapterPackage = JSON.parse(await readFile(join(adapterSource, 'package.json'), 'utf8'));
   if (Object.keys(adapterPackage.dependencies ?? {}).length) throw new Error('Package adapter runtime dependencies explicitly before publishing');
   await cp(adapterSource, join(stage, 'node_modules', 'serverless-http'), { recursive: true });
-  await writeFile(join(stage, 'package.json'), JSON.stringify({ name: 'logs-of-change-web-lambda', private: true, type: 'module' }, null, 2) + '\n');
+  await writeFile(join(stage, 'package.json'), JSON.stringify({ name: 'logsofchange-web-lambda', private: true, type: 'module' }, null, 2) + '\n');
   await writeFile(join(stage, 'index.mjs'), [
     "import serverless from 'serverless-http';",
     "import { reqHandler } from './server/server.mjs';",
@@ -39,7 +39,7 @@ export async function packageWeb() {
   }
   await inventory(stage);
   const sha256 = createHash('sha256').update(JSON.stringify(files)).digest('hex');
-  await writeFile(join(stage, 'artifact-manifest.json'), JSON.stringify({ product: 'logs-of-change', runtime: 'nodejs24.x', architecture: 'arm64', handler: 'index.handler', sha256, files }, null, 2) + '\n');
+  await writeFile(join(stage, 'artifact-manifest.json'), JSON.stringify({ product: 'logsofchange', runtime: 'nodejs24.x', architecture: 'arm64', handler: 'index.handler', sha256, files }, null, 2) + '\n');
   return { directory: stage, sha256, files: files.length };
 }
 

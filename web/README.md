@@ -24,7 +24,7 @@ cd ..
 node --test serverless/test/web-lambda.test.mjs
 ```
 
-La salida de Angular queda en `web/dist/logs-of-change-web/`; el empaquetador crea `serverless/.build/web/` con `index.handler` y un manifiesto SHA-256. Puede usarse como `CodeUri` de SAM o empaquetarse para Lambda. No requiere instalar las dependencias heredadas de NestJS.
+La salida de Angular queda en `web/dist/logsofchange-web/`; el empaquetador crea `serverless/.build/web/` con `index.handler` y un manifiesto SHA-256. Puede usarse como `CodeUri` de SAM o empaquetarse para Lambda. No requiere instalar las dependencias heredadas de NestJS.
 
 `NG_ALLOWED_HOSTS` debe incluir los hosts que el SSR recibe. Si el proxy envía encabezados confiables, configurar explícitamente `NG_TRUST_PROXY_HEADERS` de acuerdo con ese proxy. Las páginas HTML usan `Cache-Control: no-store`; los assets con hash usan caché larga. Las solicitudes `/api/*` nunca reciben el HTML de la SPA desde la Lambda del frontend.
 

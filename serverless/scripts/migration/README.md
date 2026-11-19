@@ -56,7 +56,7 @@ La salida válida contiene:
 - `sourceDigest`: SHA-256 de los campos normalizados, el sistema y el mapeo. No es el hash del archivo original ni incorpora secretos descartados.
 - `contentDigest`: SHA-256 de cada contenido histórico; `projectionDigest` cubre la proyección completa.
 
-La serialización canónica ordena las claves de objetos y conserva arrays (`logs-of-change-canonical-json-v1`). El resultado no incluye reloj local y es reproducible con la misma copia normalizada.
+La serialización canónica ordena las claves de objetos y conserva arrays (`logsofchange-canonical-json-v1`). El resultado no incluye reloj local y es reproducible con la misma copia normalizada.
 
 Las direcciones históricas de archivos sólo son metadatos sin verificar. Se eliminan usuario, contraseña, query string y fragmento de las URLs HTTP(S); otras URL con protocolo y rutas locales absolutas se rechazan. No se descargan bytes ni se convierten esas referencias en adjuntos aceptados. `verification: "unverified-historical-reference"` mantiene visible esta distinción.
 

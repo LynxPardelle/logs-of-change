@@ -6,13 +6,16 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const serviceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const base = new URL(process.argv[2] || 'https://dev.hitoclaro.lynxpardelle.com');
+const base = new URL(process.argv[2] || 'https://dev.logsofchange.lynxpardelle.com');
 assert.equal(base.protocol, 'https:', 'Browser QA expects the HTTPS deployment URL.');
+assert.equal(base.hostname, 'dev.logsofchange.lynxpardelle.com', 'Browser QA is restricted to the development deployment.');
+assert.ok(!base.username && !base.password && !base.port && !base.search && !base.hash && base.pathname === '/', 'Browser QA expects only the development origin.');
 const output = join(serviceRoot, '.deployment', 'development', 'browser-qa');
 await mkdir(output, { recursive: true });
 const safeUrl = value => { try { const url = new URL(value); return `${url.origin}${url.pathname}`; } catch { return value; } };
-const channel = (process.env.LOGS_OF_CHANGE_BROWSER_CHANNEL || process.env.HITOCLARO_BROWSER_CHANNEL) || (existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe') ? 'chrome' : existsSync('C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe') ? 'msedge' : undefined);
-const browser = await chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
+const executablePath = process.env.LOGSOFCHANGE_BROWSER_PATH;
+const channel = process.env.LOGSOFCHANGE_BROWSER_CHANNEL || (existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe') ? 'chrome' : existsSync('C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe') ? 'msedge' : undefined);
+const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : channel ? { channel } : {}) });
 const report = { origin: base.origin, checkedAt: new Date().toISOString(), pages: [], checks: {} };
 
 try {
@@ -43,7 +46,7 @@ try {
     assert.equal(httpErrors.length, 0, `${name}: HTTP errors while opening the landing`);
     const health = await context.request.get(new URL('/api/v1/health', base).href);
     assert.equal(health.status(), 200, 'Health HTTP status');
-    assert.deepEqual(await health.json(), { status: 'ok', service: 'logs-of-change' });
+    assert.deepEqual(await health.json(), { status: 'ok', service: 'logsofchange' });
     const configResponse = await context.request.get(new URL('/api/v1/config', base).href);
     assert.equal(configResponse.status(), 200, 'Runtime configuration HTTP status');
     const config = await configResponse.json();

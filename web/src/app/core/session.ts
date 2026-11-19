@@ -29,13 +29,13 @@ export class Session {
       if (domain.protocol !== 'https:' || callback.origin !== location.origin) throw new Error('La configuración de acceso no corresponde a este espacio.');
       this.config.set(config);
       const { UserManager, WebStorageStateStore } = await import('oidc-client-ts');
-      const store = new WebStorageStateStore({ store: sessionStorage, prefix: 'logs-of-change.user.' });
+      const store = new WebStorageStateStore({ store: sessionStorage, prefix: 'logsofchange.user.' });
       this.manager = new UserManager({
         authority: config.auth.issuer, client_id: config.auth.clientId,
         redirect_uri: config.auth.redirectUri, post_logout_redirect_uri: `${location.origin}/`,
         response_type: 'code', scope: 'openid email profile', loadUserInfo: false,
         automaticSilentRenew: false, monitorSession: false,
-        stateStore: new WebStorageStateStore({ store: sessionStorage, prefix: 'logs-of-change.state.' }),
+        stateStore: new WebStorageStateStore({ store: sessionStorage, prefix: 'logsofchange.state.' }),
         userStore: {
           get: (key) => store.get(key), remove: (key) => store.remove(key), getAllKeys: () => store.getAllKeys(),
           set: (key, value) => { const user = JSON.parse(value); delete user.refresh_token; return store.set(key, JSON.stringify(user)); },

@@ -47,8 +47,14 @@ Resources:
   EvidenceLogs:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/hitoclaro/${Environment}/evidence'
+      LogGroupName: !Sub '/logsofchange/${Environment}/evidence'
       RetentionInDays: 14
 Outputs:
+  StackName:
+    Value: !Ref AWS::StackName
+  Region:
+    Value: !Ref AWS::Region
+  EnvironmentName:
+    Value: !Ref Environment
   ApiEndpoint: {Value: !Sub 'https://${EvidenceApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}
   ApiDomainName: {Value: !Sub '${EvidenceApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}

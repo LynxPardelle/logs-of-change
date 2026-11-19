@@ -43,6 +43,6 @@ function isProductHealth(response: unknown): boolean {
     'status' in response &&
     response.status === 'ok' &&
     'service' in response &&
-    response.service === 'logs-of-change'
+    response.service === 'logsofchange'
   );
 }

@@ -154,7 +154,7 @@ export function createReleasesService(repository, { now = () => new Date().toISO
       return mutate(context, writers, `submit/${releaseId}`, { expectedRevision: number }, key, async (time) => {
         const previous = await releaseFor(context, releaseId);
         if (previous.revision !== number || previous.status !== 'draft') fail(409, 'CONFLICT', 'La entrega ya cambió o ya fue presentada.');
-        const manifest = { schema: 'logs-of-change.revision.v1', orgId: context.orgId, projectId: context.projectId, releaseId, revision: number,
+        const manifest = { schema: 'logsofchange.revision.v1', orgId: context.orgId, projectId: context.projectId, releaseId, revision: number,
           title: previous.title, summary: previous.summary, changes: previous.changes, attachments: [], createdBy: previous.authoredBy ?? previous.createdBy, submittedBy: context.sub, submittedAt: time, source: 'native' };
         const revision = { number, manifest, digest: digest(manifest), digestAlgorithm: 'SHA-256', canonicalization: 'sorted-json-v1', submittedAt: time };
         const release = { ...previous, status: 'pending_review', updatedAt: time, version: previous.version + 1 };

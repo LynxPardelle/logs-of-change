@@ -13,9 +13,9 @@ Parameters:
   DomainName:
     Type: String
     AllowedValues:
-    - dev.hitoclaro.lynxpardelle.com
-    - test.hitoclaro.lynxpardelle.com
-    - hitoclaro.lynxpardelle.com
+    - dev.logsofchange.lynxpardelle.com
+    - test.logsofchange.lynxpardelle.com
+    - logsofchange.lynxpardelle.com
   HostedZoneId:
     Type: AWS::Route53::HostedZone::Id
   IdentityApiDomainName:
@@ -137,7 +137,7 @@ Resources:
     Properties:
       OriginAccessControlConfig:
         Name:
-          Fn::Sub: hitoclaro-${Environment}-ssr
+          Fn::Sub: logsofchange-${Environment}-ssr
         OriginAccessControlOriginType: lambda
         SigningBehavior: always
         SigningProtocol: sigv4
@@ -146,7 +146,7 @@ Resources:
     Properties:
       CachePolicyConfig:
         Name:
-          Fn::Sub: hitoclaro-${Environment}-no-cache
+          Fn::Sub: logsofchange-${Environment}-no-cache
         DefaultTTL: 0
         MinTTL: 0
         MaxTTL: 0
@@ -164,7 +164,7 @@ Resources:
     Properties:
       OriginRequestPolicyConfig:
         Name:
-          Fn::Sub: hitoclaro-${Environment}-viewer-except-host
+          Fn::Sub: logsofchange-${Environment}-viewer-except-host
         CookiesConfig:
           CookieBehavior: all
         HeadersConfig:
@@ -178,7 +178,7 @@ Resources:
     Properties:
       ResponseHeadersPolicyConfig:
         Name:
-          Fn::Sub: hitoclaro-${Environment}-security
+          Fn::Sub: logsofchange-${Environment}-security
         SecurityHeadersConfig:
           ContentTypeOptions:
             Override: true
@@ -378,15 +378,21 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName:
-        Fn::Sub: /hitoclaro/${Environment}/edge
+        Fn::Sub: /logsofchange/${Environment}/edge
       RetentionInDays: 14
   FrontendLogs:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName:
-        Fn::Sub: /hitoclaro/${Environment}/frontend
+        Fn::Sub: /logsofchange/${Environment}/frontend
       RetentionInDays: 14
 Outputs:
+  StackName:
+    Value: !Ref AWS::StackName
+  Region:
+    Value: !Ref AWS::Region
+  EnvironmentName:
+    Value: !Ref Environment
   PublicUrl:
     Value:
       Fn::Sub: https://${DomainName}

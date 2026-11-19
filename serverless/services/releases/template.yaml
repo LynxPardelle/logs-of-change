@@ -109,13 +109,13 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: !Sub '/aws/lambda/hitoclaro-${Environment}-releases'
+      LogGroupName: !Sub '/aws/lambda/logsofchange-${Environment}-releases'
       RetentionInDays: 14
 
   ReleasesFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub 'hitoclaro-${Environment}-releases'
+      FunctionName: !Sub 'logsofchange-${Environment}-releases'
       CodeUri: ../../.build/backend/
       Handler: releases/index.handler
       Runtime: nodejs24.x
@@ -147,6 +147,12 @@ Resources:
             PayloadFormatVersion: '2.0'
 
 Outputs:
+  StackName:
+    Value: !Ref AWS::StackName
+  Region:
+    Value: !Ref AWS::Region
+  EnvironmentName:
+    Value: !Ref Environment
   ApiEndpoint:
     Value: !Sub 'https://${ReleasesApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
   ApiDomainName:

@@ -32,7 +32,7 @@ export function createReleasesHandler(service) {
       throw new ApiError(405, 'METHOD_NOT_ALLOWED', 'La operación no está disponible.');
     } catch (error) {
       if (error instanceof ApiError) return respond(error.statusCode, { error: { code: error.code, message: error.message } });
-      console.error(JSON.stringify({ service: 'logs-of-change-releases', error: error.name ?? 'Error', requestId: event.requestContext?.requestId }));
+      console.error(JSON.stringify({ service: 'logsofchange-releases', error: error.name ?? 'Error', requestId: event.requestContext?.requestId }));
       return respond(500, { error: { code: 'INTERNAL_ERROR', message: 'No se pudo completar la operación. Intenta nuevamente.' } });
     }
   };

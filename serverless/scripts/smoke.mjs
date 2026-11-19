@@ -22,10 +22,16 @@ if (!/^[a-z0-9-]+\.json$/.test(reportName)) throw new Error('Invalid sanitized r
 const deployment = JSON.parse(await readFile(resolve(directory, 'outputs.json'), 'utf8'));
 if (deployment.environment !== environment) throw new Error('Deployment environment does not match the requested smoke.');
 const origin = deployment.edge.PublicUrl.replace(/\/$/, '');
-const expectedDomain = environment === 'development' ? 'dev.hitoclaro.lynxpardelle.com' : 'test.hitoclaro.lynxpardelle.com';
+const expectedDomain = environment === 'development' ? 'dev.logsofchange.lynxpardelle.com' : 'test.logsofchange.lynxpardelle.com';
 if (new URL(origin).hostname !== expectedDomain || new URL(origin).protocol !== 'https:') throw new Error('Smoke origin is not the isolated Logs of Change environment.');
 const { UserPoolId: poolId, UserPoolClientId: clientId, AccessTableName: accessTable } = deployment.identity;
 const releasesTable = deployment.releases.ReleasesTableName;
+// Local outputs are public configuration, but a smoke must still never point
+// its synthetic cleanup at a table from another environment or deployment.
+const sourceTable = /^arn:aws:dynamodb:us-east-1:(\d{12}):table\/(.+)$/.exec(deployment.releases.ReleasesTableArn || '');
+assert.ok(sourceTable && sourceTable[2] === releasesTable && releasesTable.startsWith(`logsofchange-${environment}-`), 'Unexpected release table scope.');
+assert.equal(deployment.identity.AccessTableArn, `arn:aws:dynamodb:us-east-1:${sourceTable[1]}:table/${accessTable}`);
+assert.ok(accessTable.startsWith(`logsofchange-${environment}-`), 'Unexpected access table scope.');
 const region = 'us-east-1';
 const cognito = new CognitoIdentityProviderClient({ region });
 const dynamoClient = new DynamoDBClient({ region });
@@ -43,19 +49,19 @@ let browser;
 let backupArn;
 let restoredTableArn;
 let restorationStarted = false;
-const restoredTableName = `hitoclaro-smoke-${runId}`;
+const restoredTableName = `logsofchange-smoke-${runId}`;
 
 function assertOwnRestoreTarget() {
-  assert.equal(restoredTableName, `hitoclaro-smoke-${runId}`);
+  assert.equal(restoredTableName, `logsofchange-smoke-${runId}`);
   assert.notEqual(restoredTableName, releasesTable);
-  assert.match(restoredTableName, /^hitoclaro-smoke-[a-f0-9-]{36}$/);
+  assert.match(restoredTableName, /^logsofchange-smoke-[a-f0-9-]{36}$/);
   const expectedArn = `${deployment.releases.ReleasesTableArn.split(':table/')[0]}:table/${restoredTableName}`;
   if (restoredTableArn) assert.equal(restoredTableArn, expectedArn);
 }
 
 async function restoreAndVerify(releaseId, originalRevision, originalDecision) {
   assertOwnRestoreTarget();
-  const result = await dynamoClient.send(new CreateBackupCommand({ TableName: releasesTable, BackupName: `hitoclaro-smoke-${runId}` }));
+  const result = await dynamoClient.send(new CreateBackupCommand({ TableName: releasesTable, BackupName: `logsofchange-smoke-${runId}` }));
   backupArn = result.BackupDetails?.BackupArn;
   assert.ok(backupArn?.startsWith(`${deployment.releases.ReleasesTableArn}/backup/`));
   let available = false;
@@ -76,13 +82,13 @@ async function restoreAndVerify(releaseId, originalRevision, originalDecision) {
   const decision = (await dynamo.send(new GetCommand({ TableName: restoredTableName, Key: { PK, SK: 'DECISION#0000000002' }, ConsistentRead: true }))).Item?.data;
   assert.deepEqual(revision, originalRevision);
   assert.deepEqual(decision, originalDecision);
-  assert.ok(verifyActa({ schema: 'logs-of-change.acta.v1', orgId, projectId, releaseId, revision, decision }));
+  assert.ok(verifyActa({ schema: 'logsofchange.acta.v1', orgId, projectId, releaseId, revision, decision }));
   report.restore = { performed: true, sourceUnmodified: true, acceptedRevisionRecovered: true, digestVerified: true };
 }
 
 function safeFailure(error) {
   // Avoid serializing SDK requests, browser traces, passwords, codes, or tokens.
-  return { name: error?.name || 'Error', stage: report.currentStage || 'initialization', oauthStep: report.oauthStep, oauthHttpStatus: report.oauthHttpStatus, callback: report.callbackDiagnostic };
+  return { name: error?.name || 'Error', stage: report.currentStage || 'initialization', browserStep: report.browserStep, oauthStep: report.oauthStep, oauthHttpStatus: report.oauthHttpStatus, callback: report.callbackDiagnostic };
 }
 
 async function check(name, operation) {
@@ -124,11 +130,11 @@ async function createUser(label, role) {
 }
 
 async function browserPath() {
-  for (const candidate of [(process.env.LOGS_OF_CHANGE_BROWSER_PATH || process.env.HITOCLARO_BROWSER_PATH), 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  for (const candidate of [process.env.LOGSOFCHANGE_BROWSER_PATH, 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', 'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'].filter(Boolean)) {
     try { await access(candidate); return candidate; } catch {}
   }
-  throw new Error('Installed Chromium browser was not found. Set LOGS_OF_CHANGE_BROWSER_PATH to an installed browser.');
+  throw new Error('Installed Chromium browser was not found. Set LOGSOFCHANGE_BROWSER_PATH to an installed browser.');
 }
 
 async function authenticate(user, config) {
@@ -201,7 +207,8 @@ async function queryPartition(table, PK) {
   return items;
 }
 
-async function checkWebWorkspace(user) {
+async function openWebWorkspace(user) {
+  report.browserStep = `login-${user.label}`;
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
   try {
@@ -212,21 +219,107 @@ async function checkWebWorkspace(user) {
     await page.locator('input[type="submit"]:visible, button[type="submit"]:visible').first().click();
     await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).waitFor({ timeout: 45000 });
     assert.equal(await page.locator('#project').inputValue(), `${orgId}/${projectId}`);
+    return { context, page };
+  } catch (error) { await context.close(); throw error; }
+}
+
+async function closeWebWorkspace({ context, page }) {
+  try {
+    await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+    await page.getByRole('button', { name: 'Iniciar sesión', exact: false }).waitFor({ timeout: 45000 });
+  } finally { await context.close(); }
+}
+
+async function downloadWebActa(page, revision) {
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: /Descargar acta/ }).nth(revision - 1).click();
+  const download = await downloaded;
+  assert.match(download.suggestedFilename(), /^logsofchange-[A-Za-z0-9_-]+-r[1-9]\d*\.json$/);
+  const file = await download.path();
+  assert.ok(file, 'The browser did not produce the synthetic acta download.');
+  const acta = JSON.parse(await readFile(file, 'utf8'));
+  assert.ok(verifyActa(acta));
+  assert.equal(acta.schema, 'logsofchange.acta.v1');
+  assert.equal(acta.orgId, orgId); assert.equal(acta.projectId, projectId);
+  assert.equal(acta.revision.number, revision);
+  return acta;
+}
+
+async function checkWebWorkspace(editor, reviewer) {
+  const title = 'Synthetic UI milestone';
+  let uiReleaseId;
+  let revisionOne;
+  let editorWorkspace = await openWebWorkspace(editor);
+  try {
+    report.browserStep = 'editor-create-and-submit';
+    const { page } = editorWorkspace;
     await page.getByRole('button', { name: /Nueva entrega/ }).click();
-    await page.locator('#title').fill('Synthetic UI milestone');
+    await page.locator('#title').fill(title);
     await page.locator('#summary').fill('Created from the real Angular workspace with synthetic data.');
     await page.locator('#changes').fill('Synthetic browser form');
+    const createdResponse = page.waitForResponse((response) => response.request().method() === 'POST' && new URL(response.url()).pathname === base);
     await page.getByRole('button', { name: 'Guardar borrador', exact: true }).click();
+    const created = await createdResponse;
+    assert.equal(created.status(), 201);
+    uiReleaseId = (await created.json()).release.id;
     await page.getByText('Borrador guardado.', { exact: false }).waitFor();
     await page.getByRole('button', { name: /Presentar entrega/ }).click();
     await page.getByText('Entrega presentada.', { exact: false }).waitFor();
     assert.ok(await page.locator('.badge.pending_review').isVisible());
-    const refreshStored = await page.evaluate(() => Object.entries(sessionStorage).some(([key, value]) => key.startsWith('logs-of-change.user.') && Boolean(JSON.parse(value).refresh_token)));
+    const refreshStored = await page.evaluate(() => Object.entries(sessionStorage).some(([key, value]) => key.startsWith('logsofchange.user.') && Boolean(JSON.parse(value).refresh_token)));
     assert.equal(refreshStored, false);
     await page.screenshot({ path: resolve(directory, 'authenticated-workspace.png'), fullPage: true });
-    await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
-    await page.getByRole('button', { name: 'Iniciar sesión', exact: false }).waitFor({ timeout: 45000 });
-  } finally { await context.close(); }
+  } finally { await closeWebWorkspace(editorWorkspace); }
+
+  let reviewWorkspace = await openWebWorkspace(reviewer);
+  try {
+    report.browserStep = 'reviewer-requests-changes-and-downloads-acta';
+    const { page } = reviewWorkspace;
+    await page.getByRole('button', { name: new RegExp(title) }).click();
+    await page.locator('#reason').fill('Synthetic UI change requested.');
+    await page.getByRole('button', { name: 'Pedir cambios', exact: true }).click();
+    await page.getByText('Decisión registrada: cambios solicitados.', { exact: false }).waitFor();
+    assert.ok(await page.locator('.badge.changes_requested').isVisible());
+    revisionOne = await downloadWebActa(page, 1);
+    assert.equal(revisionOne.decision.outcome, 'changes_requested');
+    assert.equal(revisionOne.releaseId, uiReleaseId);
+    await page.screenshot({ path: resolve(directory, 'reviewer-changes-requested.png'), fullPage: true });
+  } finally { await closeWebWorkspace(reviewWorkspace); }
+
+  editorWorkspace = await openWebWorkspace(editor);
+  try {
+    report.browserStep = 'editor-revises-and-resubmits';
+    const { page } = editorWorkspace;
+    await page.getByRole('button', { name: new RegExp(title) }).click();
+    await page.getByRole('button', { name: /Crear nueva revisión/ }).click();
+    await page.locator('#changes').fill('Synthetic browser change resolved.');
+    await page.getByRole('button', { name: 'Guardar borrador', exact: true }).click();
+    await page.getByText('Nueva revisión preparada.', { exact: false }).waitFor();
+    await page.getByRole('button', { name: /Presentar entrega/ }).click();
+    await page.getByText('Entrega presentada.', { exact: false }).waitFor();
+    assert.ok(await page.locator('.badge.pending_review').isVisible());
+  } finally { await closeWebWorkspace(editorWorkspace); }
+
+  reviewWorkspace = await openWebWorkspace(reviewer);
+  try {
+    report.browserStep = 'reviewer-accepts-and-verifies-actas';
+    const { page } = reviewWorkspace;
+    await page.getByRole('button', { name: new RegExp(title) }).click();
+    await page.locator('#reason').fill('Synthetic UI milestone accepted.');
+    await page.getByRole('button', { name: /Aceptar entrega/ }).click();
+    await page.getByText('Decisión registrada: entrega aceptada.', { exact: false }).waitFor();
+    assert.ok(await page.locator('.badge.accepted').isVisible());
+    const finalActa = await downloadWebActa(page, 2);
+    assert.equal(finalActa.releaseId, uiReleaseId);
+    assert.equal(finalActa.decision.outcome, 'accepted');
+    assert.equal(finalActa.decision.actor, reviewer.sub);
+    const previous = await downloadWebActa(page, 1);
+    assert.deepEqual(previous.revision, revisionOne.revision);
+    assert.deepEqual(previous.decision, revisionOne.decision);
+    await page.screenshot({ path: resolve(directory, 'reviewer-accepted.png'), fullPage: true });
+  } finally { await closeWebWorkspace(reviewWorkspace); }
+  report.browserApproval = { created: true, submitted: true, changesRequested: true, revised: true, accepted: true, actaDownloadedAndVerified: true, priorEvidencePreserved: true };
+  delete report.browserStep;
 }
 
 async function cleanup() {
@@ -291,7 +384,7 @@ try {
   let config;
   await check('public health, runtime configuration and unauthenticated protection', async () => {
     const health = await api(null, '/api/v1/health');
-    assert.equal(health.body.service, 'logs-of-change');
+    assert.equal(health.body.service, 'logsofchange');
     assert.equal(health.headers.get('cache-control'), 'no-store');
     config = (await api(null, '/api/v1/config')).body;
     assert.equal(config.product, 'Logs of Change');
@@ -319,8 +412,8 @@ try {
     assert.ok(found, 'Synthetic membership was not discoverable after bounded GSI propagation wait.');
     assert.deepEqual((await api(outsider, '/api/v1/identity/me')).body.memberships, []);
   });
-  await check('real Angular OAuth callback, workspace draft and submission', async () => {
-    await checkWebWorkspace(editor);
+  await check('real Angular approval journey with change request, revision and downloaded actas', async () => {
+    await checkWebWorkspace(editor, reviewer);
   });
   const draftBody = { title: 'Synthetic milestone', summary: 'Disposable acceptance check; no customer data.', changes: ['Synthetic accessible form'] };
   const createKey = randomUUID();

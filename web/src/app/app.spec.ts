@@ -22,7 +22,7 @@ describe('App', () => {
     fixture.detectChanges();
 
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne('/api/v1/health').flush({ service: 'logs-of-change', status: 'ok' });
+    http.expectOne('/api/v1/health').flush({ service: 'logsofchange', status: 'ok' });
     fixture.detectChanges();
 
     const page = fixture.nativeElement as HTMLElement;
