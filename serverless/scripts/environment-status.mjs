@@ -13,6 +13,7 @@ const required = Object.freeze({
   identity: ['UserPoolId', 'UserPoolClientId', 'Issuer', 'AuthDomain', 'AccessTableName', 'AccessTableArn', 'ApiEndpoint', 'ApiDomainName'],
   releases: ['ApiEndpoint', 'ApiDomainName', 'ReleasesTableName', 'ReleasesTableArn', 'EvidenceBucketName'],
   evidence: ['ApiEndpoint', 'ApiDomainName'],
+  publications: ['ApiEndpoint', 'ApiDomainName', 'AdminTableName', 'AdminTableArn', 'PublicTableName', 'PublicTableArn'],
   edge: ['PublicUrl', 'HealthUrl', 'DistributionId', 'FrontendFunctionName'],
 });
 
@@ -61,7 +62,7 @@ function publicSnapshot(environment, values) {
   const expectedOrigin = `https://${domains[environment]}`;
   if (snapshot.edge.PublicUrl !== expectedOrigin) throw new Error(`Unexpected PublicUrl for ${environment}.`);
   if (snapshot.edge.HealthUrl !== `${expectedOrigin}/api/v1/health`) throw new Error(`Unexpected HealthUrl for ${environment}.`);
-  for (const service of ['identity', 'releases', 'evidence']) {
+  for (const service of ['identity', 'releases', 'evidence', 'publications']) {
     const api = snapshot[service];
     if (!/^https:\/\/[a-z0-9]+\.execute-api\.us-east-1\.amazonaws\.com$/.test(api.ApiEndpoint) || new URL(api.ApiEndpoint).hostname !== api.ApiDomainName) {
       throw new Error(`Unexpected API endpoint/domain outputs for ${service}.`);

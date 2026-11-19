@@ -10,7 +10,7 @@ const domains = Object.freeze({
   testing: 'test.logsofchange.lynxpardelle.com',
   production: 'logsofchange.lynxpardelle.com',
 });
-const services = ['identity', 'releases', 'evidence', 'edge'];
+const services = ['identity', 'releases', 'evidence', 'publications', 'edge'];
 
 export function parseDeployArguments(args) {
   const options = { environment: 'development', service: 'all', approveProduction: false };
@@ -105,6 +105,9 @@ export async function deployEnvironment(options, { runner = run } = {}) {
   await deploy('evidence', 'serverless/services/evidence/template.yaml', { UserPoolId: access.UserPoolId, UserPoolClientId: access.UserPoolClientId, ReleasesApiEndpoint: releases.ApiEndpoint });
   const evidence = await outputs('evidence');
   if (normalized.service === 'evidence') { console.log('Evidence deployed.'); return; }
+  await deploy('publications', 'serverless/services/publications/template.yaml', { UserPoolId: access.UserPoolId, UserPoolClientId: access.UserPoolClientId, AccessTableName: access.AccessTableName, AccessTableArn: access.AccessTableArn, EvidenceApiEndpoint: evidence.ApiEndpoint });
+  const publications = await outputs('publications');
+  if (normalized.service === 'publications') { console.log('Publications deployed.'); return; }
   let hostedZoneId = normalized.hostedZoneId;
   if (!hostedZoneId) {
     const result = JSON.parse(await aws(['route53', 'list-hosted-zones-by-name', '--dns-name', 'lynxpardelle.com', '--output', 'json'], true));
@@ -112,9 +115,9 @@ export async function deployEnvironment(options, { runner = run } = {}) {
     if (!zone) throw new Error('Public hosted zone lynxpardelle.com not found.');
     hostedZoneId = zone.Id.replace('/hostedzone/', '');
   }
-  await deploy('edge', 'serverless/template.yaml', { DomainName: domain, HostedZoneId: hostedZoneId, IdentityApiDomainName: access.ApiDomainName, ReleasesApiDomainName: releases.ApiDomainName, EvidenceApiDomainName: evidence.ApiDomainName, AuthIssuer: access.Issuer, AuthClientId: access.UserPoolClientId, AuthDomain: access.AuthDomain });
+  await deploy('edge', 'serverless/template.yaml', { DomainName: domain, HostedZoneId: hostedZoneId, IdentityApiDomainName: access.ApiDomainName, ReleasesApiDomainName: releases.ApiDomainName, EvidenceApiDomainName: evidence.ApiDomainName, PublicationsApiDomainName: publications.ApiDomainName, AuthIssuer: access.Issuer, AuthClientId: access.UserPoolClientId, AuthDomain: access.AuthDomain });
   const edge = await outputs('edge');
-  await writeFile(resolve(directory, 'outputs.json'), JSON.stringify({ environment, region, domain, stackNames, identity: access, releases, evidence, edge }, null, 2));
+  await writeFile(resolve(directory, 'outputs.json'), JSON.stringify({ environment, region, domain, stackNames, identity: access, releases, evidence, publications, edge }, null, 2));
   console.log(`Deployment complete: ${edge.PublicUrl}`);
 }
 

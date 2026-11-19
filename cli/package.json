@@ -1,0 +1,10 @@
+{
+  "name": "logsofchange-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Portable Logs of Change draft ingestion client",
+  "engines": { "node": ">=24.15 <25" },
+  "bin": { "logsofchange": "./logsofchange.mjs" },
+  "files": ["logsofchange.mjs", "README.md"]
+}

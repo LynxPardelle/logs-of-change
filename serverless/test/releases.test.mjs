@@ -75,6 +75,30 @@ test('creates a draft and denies another organization or project every read', as
   }
 });
 
+test('concurrent identical submit, decision and revision replay after a stale receipt lookup', async () => {
+  for (const stage of ['submit', 'decide', 'revise']) {
+    const { service, repository } = setup();
+    const { release } = await service.create(editor, content, 'create');
+    if (stage !== 'submit') await service.submit(editor, release.id, { expectedRevision: 1 }, 'submit-initial');
+    if (stage === 'revise') await service.decide(reviewer, release.id, { expectedRevision: 1, outcome: 'changes_requested', reason: 'Change' }, 'decide-initial');
+    const action = stage === 'submit' ? () => service.submit(editor, release.id, { expectedRevision: 1 }, 'same-attempt') : stage === 'decide' ? () => service.decide(reviewer, release.id, { expectedRevision: 1, outcome: 'accepted' }, 'same-attempt') : () => service.revise(editor, release.id, { ...content, expectedRevision: 1 }, 'same-attempt');
+    let releaseSecond; let signalSecond; let reads = 0;
+    const barrier = new Promise(resolve => { releaseSecond = resolve; });
+    const entered = new Promise(resolve => { signalSecond = resolve; });
+    const original = repository.getReceipt.bind(repository);
+    repository.getReceipt = async (...args) => {
+      const snapshot = await original(...args);
+      if (++reads === 2) { signalSecond(); await barrier; }
+      return snapshot;
+    };
+    const first = action(); const second = action();
+    await entered;
+    const result = await first;
+    releaseSecond();
+    assert.deepEqual(await second, result, `${stage} must return the original receipt`);
+  }
+});
+
 test('requires an active project grant and editor role for drafts', async () => {
   const { service, repository } = setup();
   await assert.rejects(service.create(reviewer, content, 'draft-1'), code('FORBIDDEN'));
@@ -106,6 +130,17 @@ test('submission freezes a canonical manifest and digest for its exact revision'
   assert.equal(result.revision.digest, createHash('sha256').update(canonicalJson(result.revision.manifest)).digest('hex'));
   assert.equal(result.revision.manifest.title, content.title);
   assert.deepEqual(await service.submit(editor, release.id, { expectedRevision: 1 }, 'submit-1'), result);
+});
+
+test('a human submission preserves server integration provenance in the frozen manifest', async () => {
+  const { service, repository } = setup();
+  const { release } = await service.create(editor, content, 'draft');
+  const provenance = { kind: 'integration', keyId: 'a'.repeat(32), system: 'github', externalId: 'run-42', revision: 'abc123' };
+  repository.releases.get(`${orgId}/${projectId}/${release.id}`).provenance = provenance;
+  const { revision } = await service.submit(editor, release.id, { expectedRevision: 1 }, 'submit');
+  assert.equal(revision.manifest.source, 'integration');
+  assert.deepEqual(revision.manifest.provenance, provenance);
+  assert.equal(revision.digest, createHash('sha256').update(canonicalJson(revision.manifest)).digest('hex'));
 });
 
 test('only a separate authorized reviewer can decide and change requests need a reason', async () => {

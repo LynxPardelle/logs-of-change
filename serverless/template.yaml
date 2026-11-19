@@ -24,6 +24,8 @@ Parameters:
     Type: String
   EvidenceApiDomainName:
     Type: String
+  PublicationsApiDomainName:
+    Type: String
   AuthIssuer:
     Type: String
   AuthClientId:
@@ -112,6 +114,8 @@ Resources:
       Environment:
         Variables:
           NODE_ENV: production
+          PUBLIC_ORIGIN:
+            Fn::Sub: https://${DomainName}
           NG_ALLOWED_HOSTS:
             Fn::Sub: ${DomainName},*.lambda-url.${AWS::Region}.on.aws
           NG_TRUST_PROXY_HEADERS: x-forwarded-host,x-forwarded-proto,x-forwarded-for,x-forwarded-port
@@ -252,6 +256,13 @@ Resources:
             OriginProtocolPolicy: https-only
             OriginSSLProtocols:
             - TLSv1.2
+        - Id: publications
+          DomainName:
+            Ref: PublicationsApiDomainName
+          CustomOriginConfig:
+            OriginProtocolPolicy: https-only
+            OriginSSLProtocols:
+            - TLSv1.2
         DefaultCacheBehavior:
           TargetOriginId: frontend
           ViewerProtocolPolicy: redirect-to-https
@@ -310,6 +321,39 @@ Resources:
           - GET
           - HEAD
           - OPTIONS
+          CachePolicyId:
+            Ref: NoCache
+          OriginRequestPolicyId:
+            Ref: ViewerRequest
+          ResponseHeadersPolicyId:
+            Ref: SecurityHeaders
+          Compress: true
+        - PathPattern: /api/v1/ingestions/*
+          TargetOriginId: releases
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          CachePolicyId:
+            Ref: NoCache
+          OriginRequestPolicyId:
+            Ref: ViewerRequest
+          ResponseHeadersPolicyId:
+            Ref: SecurityHeaders
+          Compress: true
+        - PathPattern: /api/v1/publications/*
+          TargetOriginId: publications
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          CachePolicyId:
+            Ref: NoCache
+          OriginRequestPolicyId:
+            Ref: ViewerRequest
+          ResponseHeadersPolicyId:
+            Ref: SecurityHeaders
+          Compress: true
+        - PathPattern: /api/v1/public/*
+          TargetOriginId: publications
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
           CachePolicyId:
             Ref: NoCache
           OriginRequestPolicyId:
