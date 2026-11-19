@@ -99,6 +99,14 @@ El QA acepta únicamente los dominios canónicos de development/testing y guarda
 
 El smoke del incremento incorpora un canary de producto en su tenant UUID: alta de clave sintética, CLI real con secreto sólo en memoria, aprobación humana, publicación y lectura anónima, despublicación y revocación. Comprobar el informe de esa ejecución y su limpieza. Los comandos genéricos de smoke/QA mantienen su restricción a development/testing. La verificación base de producción utilizó un harness operativo local con aprobación explícita, rama main y guardas de cuenta, recursos y origen; no se debe quitar una restricción de los scripts para operar producción. El informe de producción identifica la evidencia efectivamente ejecutada y los resultados del incremento.
 
+El incremento incluye un runner de producción versionado y reproducible desde main limpio e igual a origin/main:
+
+```sh
+node --use-system-ca serverless/scripts/verify-production.mjs --approve-production=true --mode=all
+```
+
+Comprueba fuentes de HEAD, cuenta, seis stacks, cuatro tablas y Cognito antes de generar copias locales auditadas. Repite las guardas en cada copia, prohíbe restore y ejecuta QA antes del smoke; si falla el sitio no crea usuarios sintéticos. Los modos qa/smoke permiten comprobaciones separadas con la misma aprobación explícita.
+
 Publicar requiere árbol limpio, build y empaquetado del commit que se va a desplegar, pruebas y CI correcta para ese HEAD. Cada servicio puede actualizarse por separado con `deploy.mjs --service=...`. Después de promover por PR, obtener testing con avance rápido y publicar su entorno:
 
 ```sh

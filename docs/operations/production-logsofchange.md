@@ -55,7 +55,15 @@ node serverless/scripts/environment-status.mjs --environment=production
 node serverless/scripts/environment-status.mjs --environment=production --write-outputs
 ```
 
-Este lector espera publications; si falta, se detiene sin crear recursos ni usar el stack de otro entorno. El despliegue de producción exige main y `deploy.mjs --environment=production --approve-production=true`. Los comandos genéricos de smoke/QA no habilitan producción implícitamente; consultar el runner registrado antes de repetir una prueba que escriba datos sintéticos.
+Este lector espera publications; si falta, se detiene sin crear recursos ni usar el stack de otro entorno. El despliegue de producción exige main y `deploy.mjs --environment=production --approve-production=true`. Los comandos genéricos de smoke/QA no habilitan producción implícitamente.
+
+El incremento dispone de un runner versionado, reproducible desde main limpio e igual a origin/main:
+
+```sh
+node --use-system-ca serverless/scripts/verify-production.mjs --approve-production=true --mode=all
+```
+
+Valida las fuentes frente a HEAD, la cuenta y namespace de los seis stacks, cuatro tablas, pool/cliente y origen; registra SHA-256 y 11 transformaciones exactas en copias ignoradas. Cada copia vuelve a validar su propio hash y el preflight. QA se ejecuta antes del smoke y un fallo impide crear identidades sintéticas. No habilita restore. Este runner reemplaza el procedimiento local del hito base para las comprobaciones posteriores del incremento.
 
 La asignación de Plus usa `set-product-plan.mjs`: preview por defecto y aplicación sólo con `--apply=true`, validando entorno, cuenta, proyecto activo y CAS. Producción exige main y `--approve-production=true`, también para el preview. El plan pertenece a la organización, sin que las APIs del cliente puedan otorgarlo. [Procedimiento de operación](runbook.md).
 

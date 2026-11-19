@@ -114,6 +114,14 @@ El incremento añade un canary de producto al tenant UUID del smoke: Plus sinté
 
 La base de producción se verificó con un harness operativo local aprobado explícitamente, con main, cuenta y recursos propios validados y restore prohibido. Los entrypoints genéricos mantienen su restricción a development/testing. El [informe de producción](production-logsofchange.md) registra qué runner y revisión se ejecutaron; no retirar guardas para repetir una prueba en producción.
 
+El runner versionado del incremento permite repetir desde remoto la verificación completa de producción:
+
+```sh
+node --use-system-ca serverless/scripts/verify-production.mjs --approve-production=true --mode=all
+```
+
+Exige main limpio e igual a origin/main, fuentes iguales a HEAD, cuenta/ARN y nombres de producción, seis stacks estables, cuatro tablas activas y pool/cliente Cognito correctos. Genera sólo archivos ignorados y registra hashes y transformaciones exactas; cada copia vuelve a comprobar origen, fuente y permisos operativos antes de ejecutar. QA fallido impide iniciar el canary. Nunca habilita restore ni modifica las guardas de los comandos genéricos. Los modos qa/smoke permiten repetir sólo una parte con aprobación explícita.
+
 Si npm en Windows informa UNABLE_TO_VERIFY_LEAF_SIGNATURE por la cadena local de certificados, ejecutar en ese proceso con `NODE_OPTIONS=--use-system-ca` y mantener la verificación TLS activada. No cambiar strict-ssl.
 
 ## Retiro de un entorno de desarrollo vacío sustituido
