@@ -37,6 +37,7 @@ lerna-debug.log*
 
 # dotenv environment variable files
 .env
+.env.*
 .env.development.local
 .env.test.local
 .env.production.local
@@ -63,3 +64,10 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Local generated project-summary draft
 /README_TEST.md
+
+# Logs of Change generated service artifacts and local tooling
+/serverless/node_modules/
+/serverless/.build/
+/serverless/.tools/
+/serverless/.venv/
+/serverless/.deployment/

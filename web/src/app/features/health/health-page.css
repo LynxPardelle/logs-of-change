@@ -1,0 +1,83 @@
+.workspace {
+  width: min(100% - 3rem, 44rem);
+  margin-inline: auto;
+  padding-block: clamp(4rem, 12vh, 8rem);
+}
+
+.product {
+  margin-bottom: 2rem;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2.25rem, 7vw, 4rem);
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+}
+
+.product p {
+  margin-top: 0.75rem;
+  color: #505970;
+  font-size: 1.05rem;
+}
+
+.status-panel {
+  padding: clamp(1.25rem, 5vw, 2rem);
+  border: 1px solid #dce2ec;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+h2 {
+  font-size: 1.25rem;
+}
+
+.status {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin-block: 1rem 1.4rem;
+}
+
+.status-dot {
+  flex: 0 0 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: #65748b;
+}
+
+.connected {
+  background: #087443;
+}
+
+.unavailable {
+  background: #b3312b;
+}
+
+button {
+  padding: 0.65rem 1rem;
+  border: 1px solid #28346a;
+  border-radius: 0.55rem;
+  background: #28346a;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:focus-visible {
+  outline: 3px solid #495dcb;
+  outline-offset: 3px;
+}
+
+button:disabled {
+  border-color: #e3e6ec;
+  background: #e3e6ec;
+  color: #46516b;
+  cursor: default;
+}
