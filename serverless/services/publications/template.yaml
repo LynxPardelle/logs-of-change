@@ -1,0 +1,167 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Logs of Change explicit public projections with an isolated read-only public Lambda.
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [development, testing, production]
+    Default: development
+  UserPoolId:
+    Type: String
+  UserPoolClientId:
+    Type: String
+  AccessTableName:
+    Type: String
+  AccessTableArn:
+    Type: String
+  EvidenceApiEndpoint:
+    Type: String
+    AllowedPattern: 'https://[a-z0-9]+\.execute-api\.us-east-1\.amazonaws\.com'
+
+Resources:
+  PublicationsApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 30
+        ThrottlingRateLimit: 20
+      Auth:
+        DefaultAuthorizer: CognitoAccess
+        Authorizers:
+          CognitoAccess:
+            IdentitySource: $request.header.Authorization
+            AuthorizationScopes: [openid]
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}/${UserPoolId}'
+              audience: [!Ref UserPoolClientId]
+
+  AdminTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: PK, AttributeType: S}
+        - {AttributeName: SK, AttributeType: S}
+      KeySchema:
+        - {AttributeName: PK, KeyType: HASH}
+        - {AttributeName: SK, KeyType: RANGE}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      SSESpecification: {SSEEnabled: true}
+      DeletionProtectionEnabled: true
+      Tags:
+        - {Key: Product, Value: Logs of Change}
+        - {Key: Environment, Value: !Ref Environment}
+
+  PublicTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: PK, AttributeType: S}
+        - {AttributeName: SK, AttributeType: S}
+      KeySchema:
+        - {AttributeName: PK, KeyType: HASH}
+        - {AttributeName: SK, KeyType: RANGE}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      SSESpecification: {SSEEnabled: true}
+      DeletionProtectionEnabled: true
+      Tags:
+        - {Key: Product, Value: Logs of Change}
+        - {Key: Environment, Value: !Ref Environment}
+
+  PublicationsLogs:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/logsofchange/${Environment}/publications/private'
+      RetentionInDays: 14
+  PublicReaderLogs:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/logsofchange/${Environment}/publications/public'
+      RetentionInDays: 14
+
+  PublicationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../.build/backend/
+      Handler: publications/index.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 256
+      Timeout: 12
+      Environment:
+        Variables:
+          ACCESS_TABLE_NAME: !Ref AccessTableName
+          ADMIN_TABLE_NAME: !Ref AdminTable
+          PUBLIC_TABLE_NAME: !Ref PublicTable
+          EVIDENCE_API_ENDPOINT: !Ref EvidenceApiEndpoint
+      LoggingConfig: {LogFormat: JSON, LogGroup: !Ref PublicationsLogs}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:ConditionCheckItem]
+              Resource: !Ref AccessTableArn
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:ConditionCheckItem]
+              Resource: !GetAtt AdminTable.Arn
+            - Effect: Allow
+              Action: [dynamodb:PutItem, dynamodb:DeleteItem]
+              Resource: !GetAtt PublicTable.Arn
+      Events:
+        ManagePublications:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref PublicationsApi
+            Path: /api/v1/publications/orgs/{proxy+}
+            Method: ANY
+            PayloadFormatVersion: '2.0'
+
+  PublicReaderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../.build/backend/
+      Handler: publications/public-index.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 128
+      Timeout: 5
+      Environment:
+        Variables:
+          PUBLIC_TABLE_NAME: !Ref PublicTable
+      LoggingConfig: {LogFormat: JSON, LogGroup: !Ref PublicReaderLogs}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:Query]
+              Resource: !GetAtt PublicTable.Arn
+      Events:
+        PublicProject:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref PublicationsApi
+            Path: /api/v1/public/projects/{slug}
+            Method: GET
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: NONE
+
+Outputs:
+  StackName: {Value: !Ref AWS::StackName}
+  Region: {Value: !Ref AWS::Region}
+  EnvironmentName: {Value: !Ref Environment}
+  ApiEndpoint: {Value: !Sub 'https://${PublicationsApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}
+  ApiDomainName: {Value: !Sub '${PublicationsApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}
+  AdminTableName: {Value: !Ref AdminTable}
+  AdminTableArn: {Value: !GetAtt AdminTable.Arn}
+  PublicTableName: {Value: !Ref PublicTable}
+  PublicTableArn: {Value: !GetAtt PublicTable.Arn}

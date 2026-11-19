@@ -5,11 +5,12 @@
 - Repositorio: https://github.com/LynxPardelle/logs-of-change
 - Rama de continuación: `development`.
 - Producto: **Logs of Change**. El identificador técnico de todos los componentes activos es logsofchange.
-- Estado: plataforma publicada y verificada en **development y testing**. La promoción a pruebas se realizó por el [PR #337](https://github.com/LynxPardelle/logs-of-change/pull/337), merge `46f9d68f01e35a8412d570988d5e752633c2a85e`, con [CI correcta](https://github.com/LynxPardelle/logs-of-change/actions/runs/44625225969). Main permanece sin cambios y producción sigue pendiente.
-- Continuación: el trabajo nuevo y las correcciones se preparan en development; para operar o desplegar pruebas se obtiene testing después de la promoción. El checkout de cierre de esta entrega es testing. La cadena sigue **development → testing → main**, mediante pull request y merge commit.
+- Base publicada: development, testing y producción. La base llegó a main por el [PR #339](https://github.com/LynxPardelle/logs-of-change/pull/339), commit `a569e4ee086182a1060f93459b99c3f3d1117f38`, con [CI correcta](https://github.com/LynxPardelle/logs-of-change/actions/runs/44632948782) y aprobación completa verificada en https://logsofchange.lynxpardelle.com.
+- Incremento: CLI/API para proyectos externos, claves Plus y publicaciones públicas implementados en `codex/product-integrations-public`. Su rollout y comprobaciones efectivas se registran en [producción y rollout](docs/operations/production-logsofchange.md); no deducir su despliegue a partir de un checkout.
+- Continuación: el trabajo nuevo y las correcciones se preparan primero para development. La cadena sigue **development → testing → main**, mediante pull request y merge commit, con verificación desplegada antes de cada promoción. Conservar las ramas y cambios locales que se encuentren al retomar.
 - CI: workflow `Logs of Change validation`, archivo `.github/workflows/logsofchange-validation.yml`. Comprobar la ejecución asociada al HEAD remoto; no basta con una ejecución verde de un commit anterior.
 
-El árbol incluye Angular SSR, microservicios SAM de identidad/entregas/evidencia, migración offline, pruebas y herramientas operativas. El backend NestJS de `src/` conserva su contrato e incompatibilidades documentadas; no necesita instalarse para trabajar en el producto serverless.
+El árbol incluye Angular SSR, microservicios SAM de identidad/entregas/evidencia/publicaciones, CLI sin dependencias, migración offline, pruebas y herramientas operativas. El backend NestJS de `src/` conserva su contrato e incompatibilidades documentadas; no necesita instalarse para trabajar en el producto serverless.
 
 ## Obtener la rama
 
@@ -33,7 +34,7 @@ git status --short --branch
 
 ## Validación reproducible sin AWS
 
-Usar Node.js24.15 o superior dentro de la versión24 y npm. Las dependencias tienen lockfiles independientes:
+Usar Node.js 24.15 o superior dentro de la versión 24 y npm. Las dependencias tienen lockfiles independientes:
 
 ```sh
 npm ci --prefix serverless
@@ -50,7 +51,7 @@ El empaquetado debe preceder a los tests de Lambda: sin artefacto, esos tests se
 CI añade `cfn-lint==1.60.1` en Python y valida:
 
 ```sh
-cfn-lint -r us-east-1 -t serverless/template.yaml serverless/services/identity/template.yaml serverless/services/releases/template.yaml serverless/services/evidence/template.yaml
+cfn-lint -r us-east-1 -t serverless/template.yaml serverless/services/identity/template.yaml serverless/services/releases/template.yaml serverless/services/evidence/template.yaml serverless/services/publications/template.yaml
 ```
 
 En local puede usarse un virtualenv bajo `serverless/.venv/`, ignorado en Git. En Windows con una CA instalada en el sistema, `node --use-system-ca ...` o `NODE_OPTIONS=--use-system-ca` permite usarla manteniendo TLS verificado.
@@ -61,8 +62,9 @@ En local puede usarse un virtualenv bajo `serverless/.venv/`, ignorado en Git. E
 | --- | --- | --- |
 | Desarrollo | https://dev.logsofchange.lynxpardelle.com | [Desarrollo](docs/operations/development-logsofchange.md) |
 | Pruebas | https://test.logsofchange.lynxpardelle.com | [Testing](docs/operations/testing-logsofchange.md) |
+| Producción | https://logsofchange.lynxpardelle.com | [Producción y rollout](docs/operations/production-logsofchange.md) |
 
-Cada entorno tiene cinco stacks propios `logsofchange-<entorno>-identity`, `-releases`, `-evidence`, `-edge` y `-artifacts`, en us-east-1, sin compartir usuarios ni tablas. Los cinco stacks de testing terminaron CREATE_COMPLETE y su flujo completo de aprobación se verificó con datos sintéticos. Main conserva `10bd133eed06833208779e30818d6c55d500280f`; no se desplegó producción.
+La base publicada usa cinco stacks por entorno. El incremento añade `logsofchange-<entorno>-publications`, para un total de seis: identity, releases, evidence, publications, edge y artifacts, en us-east-1. Usuarios, claves y tablas son independientes entre entornos. Este checkout espera los outputs de publications; si ese stack todavía no está desplegado, el descubrimiento falla sin crearlo ni usar recursos de otro entorno. Consultar el registro de rollout antes de atribuir capacidades nuevas a un entorno.
 
 Con AWS CLI ya autenticado, el siguiente comando sólo lee CloudFormation y recupera parámetros públicos; no crea ni actualiza recursos:
 
@@ -71,6 +73,8 @@ node serverless/scripts/environment-status.mjs --environment=development
 node serverless/scripts/environment-status.mjs --environment=development --write-outputs
 node serverless/scripts/environment-status.mjs --environment=testing
 node serverless/scripts/environment-status.mjs --environment=testing --write-outputs
+node serverless/scripts/environment-status.mjs --environment=production
+node serverless/scripts/environment-status.mjs --environment=production --write-outputs
 ```
 
 La variante `--write-outputs` escribe únicamente `serverless/.deployment/<entorno>/outputs.json` local e ignorado. No necesita copiar `.env`, tokens o credenciales del otro equipo. Los outputs de Cognito y los dominios son configuración pública.
@@ -93,6 +97,8 @@ node serverless/scripts/qa-web.mjs https://test.logsofchange.lynxpardelle.com
 
 El QA acepta únicamente los dominios canónicos de development/testing y guarda sus informes/capturas en `.deployment/<entorno>/browser-qa`. El smoke comprueba dominio y tablas del entorno solicitado. `--restore=true` añade recuperación en una tabla nueva temporal y posterior limpieza únicamente en development; testing lo rechaza. Las contraseñas y tokens del smoke sólo viven en memoria. No abrir `.env`, credenciales, notas de reuniones ni vaults para preparar este repositorio.
 
+El smoke del incremento incorpora un canary de producto en su tenant UUID: alta de clave sintética, CLI real con secreto sólo en memoria, aprobación humana, publicación y lectura anónima, despublicación y revocación. Comprobar el informe de esa ejecución y su limpieza. Los comandos genéricos de smoke/QA mantienen su restricción a development/testing. La verificación base de producción utilizó un harness operativo local con aprobación explícita, rama main y guardas de cuenta, recursos y origen; no se debe quitar una restricción de los scripts para operar producción. El informe de producción identifica la evidencia efectivamente ejecutada y los resultados del incremento.
+
 Publicar requiere árbol limpio, build y empaquetado del commit que se va a desplegar, pruebas y CI correcta para ese HEAD. Cada servicio puede actualizarse por separado con `deploy.mjs --service=...`. Después de promover por PR, obtener testing con avance rápido y publicar su entorno:
 
 ```sh
@@ -105,8 +111,16 @@ node serverless/scripts/deploy.mjs --environment=testing
 
 Conservar cualquier trabajo local antes del cambio de rama. El script exige development para `--environment=development` y testing para `--environment=testing`; producción exige main y `--approve-production=true` tras revisión explícita. No cambia ramas automáticamente. Si aparece una corrección en pruebas, prepararla en development y repetir la promoción; no alterar main para resolverla.
 
+## Integraciones, consultas públicas y planes
+
+Después de desplegar el incremento, `/integrations` permite al administrador gestionar claves y seleccionar revisiones aceptadas y campos para publicar. `/downloads/logsofchange.mjs` distribuye el CLI de Node.js 24; lee únicamente `LOGSOFCHANGE_API_KEY` del entorno del proceso. `--environment=development|testing|production` elige el origen canónico, sin URL alternativa ni redirects. Usar IDs de organización/proyecto verificados e Idempotency-Key estable. La clave crea borradores privados y no puede leer, presentar, decidir o publicar.
+
+`/p/SLUG` y `GET /api/v1/public/projects/SLUG` muestran sólo la proyección publicada explícitamente. La API pública permite CORS sin credenciales; las rutas privadas y de ingesta no habilitan CORS general. El slug permanece reservado después de retirar la última publicación. Un administrador vigente puede despublicar o revocar claves aunque Plus esté vencido o las escrituras estén congeladas.
+
+Free conserva las aprobaciones manuales. Plus se controla mediante la fila de plataforma `TENANT#org / PRODUCT` de AccessTable; no se asigna con JWT de cliente ni se cobran pagos en este incremento. `serverless/scripts/set-product-plan.mjs` usa la sesión AWS de plataforma, muestra un preview por defecto y sólo escribe con `--apply=true`, validando proyecto activo y CAS. La producción requiere main y `--approve-production=true`, incluso para el preview. El plan corresponde a la organización; el argumento project verifica un proyecto activo y no limita Plus a ese único proyecto. [Contrato](docs/architecture/contracts/integrations-public-v1.md) · [Operación de planes](docs/operations/runbook.md).
+
 ## Siguiente flujo del plan
 
-TASK-014 queda parcial: testing está publicado y verificado; la promoción a main, producción y la revisión operativa del piloto siguen pendientes. TASK-005: seleccionar organización/proyecto y una exportación autorizada de origen, normalizar, cargar en un entorno aislado y conciliar. TASK-006: selector reversible de lectura y paridad. TASK-008 sigue parcial por cargas de adjuntos S3 verificadas; TASK-009 requiere autoridad y aprobación de corte del piloto real. No inventar aprobaciones al importar historia.
+La base de producción ya está publicada y verificada; el estado del incremento y sus promociones está en el registro de rollout. La revisión operativa de un piloto real permanece separada. TASK-005 requiere seleccionar organización/proyecto y una exportación autorizada, normalizar, cargar en un entorno aislado y conciliar. TASK-006: selector reversible de lectura y paridad. TASK-008 sigue parcial por cargas de adjuntos S3 verificadas; TASK-009 requiere autoridad y aprobación de corte del piloto real. No inventar aprobaciones al importar historia.
 
 [Plan actualizado](plan/architecture-serverless-product-1.md) · [Arquitectura](docs/architecture/ARCHITECTURE.md) · [Contrato v1](docs/architecture/contracts/releases-v1.md) · [Runbook](docs/operations/runbook.md) · [Identidad y continuidad](docs/architecture/adr/0003-logs-of-change-identidad.md).

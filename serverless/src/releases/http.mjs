@@ -1,7 +1,31 @@
 import { ApiError } from './domain.mjs';
+import { parseIntegrationToken } from '../integrations/keys.mjs';
 
 const headers = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' };
 const respond = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) });
+
+export function createIngestionHandler(service) {
+  return async event => {
+    try {
+      const match = /^\/api\/v1\/ingestions\/orgs\/([^/]+)\/projects\/([^/]+)\/releases\/?$/.exec(event.rawPath || '');
+      if (!match) throw new ApiError(404, 'NOT_FOUND', 'La ruta no existe.');
+      if (event.requestContext?.http?.method !== 'POST') throw new ApiError(405, 'METHOD_NOT_ALLOWED', 'Las integraciones sólo pueden crear borradores.');
+      const credential = parseIntegrationToken(event.headers?.['x-logsofchange-key'] ?? event.headers?.['X-Logsofchange-Key']);
+      if (!credential) throw new ApiError(401, 'INTEGRATION_UNAUTHORIZED', 'La credencial de integración no es válida.');
+      const raw = event.isBase64Encoded ? Buffer.from(event.body || '', 'base64').toString('utf8') : event.body || '';
+      if (Buffer.byteLength(raw, 'utf8') > 65536) throw new ApiError(413, 'PAYLOAD_TOO_LARGE', 'La entrega excede el tamaño permitido.');
+      let body;
+      try { body = JSON.parse(raw); } catch { throw new ApiError(400, 'VALIDATION_ERROR', 'El cuerpo JSON no es válido.'); }
+      const [, orgId, projectId] = match;
+      const context = { orgId, projectId, kind: 'integration', sub: `integration:${credential.keyId}`, ...credential };
+      return respond(201, await service.ingest(context, body, event.headers?.['idempotency-key'] ?? event.headers?.['Idempotency-Key']));
+    } catch (error) {
+      if (error instanceof ApiError) return respond(error.statusCode, { error: { code: error.code, message: error.message } });
+      console.error(JSON.stringify({ service: 'logsofchange-ingestions', error: error.name || 'Error', requestId: event.requestContext?.requestId }));
+      return respond(500, { error: { code: 'INTERNAL_ERROR', message: 'No se pudo crear el borrador.' } });
+    }
+  };
+}
 
 export function createReleasesHandler(service) {
   return async function handler(event) {

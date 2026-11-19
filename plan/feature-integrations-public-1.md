@@ -19,15 +19,15 @@ Implementar el diseno autorizado para clientes externos y elevar solo despues de
 - GOAL-001: Credenciales, plan e ingesta en identidad/entregas.
 | Task | Description | Completed | Date |
 |---|---|---|---|
-| TASK-001 | Implementar claves/capabilities en serverless/src/identity e ingesta en releases con pruebas de aislamiento/replay/expiry | No | |
-| TASK-002 | Implementar CLI JSON HTTPS sin imprimir secretos y comando operativo para plan | No | |
+| TASK-001 | Implementar claves/capabilities en serverless/src/identity e ingesta en releases con pruebas de aislamiento/replay/expiry | Sí | 2026-11-19 |
+| TASK-002 | Implementar CLI JSON HTTPS sin imprimir secretos y comando operativo para plan | Sí | 2026-11-19 |
 ### Implementation Phase 2
 - GOAL-002: Proyeccion publica independiente y consola.
 | Task | Description | Completed | Date |
 |---|---|---|---|
-| TASK-003 | Crear servicio publications privado/publico, tablas separadas, permisos minimos y tests | No | |
-| TASK-004 | Crear consola Angular /integrations y dashboard SSR /p/:slug con tests | No | |
-| TASK-005 | Actualizar deploy/status/CloudFront/config/CI para publications e ingesta | No | |
+| TASK-003 | Crear servicio publications privado/publico, tablas separadas, permisos minimos y tests | Sí | 2026-11-19 |
+| TASK-004 | Crear consola Angular /integrations y dashboard SSR /p/:slug con tests | Sí | 2026-11-19 |
+| TASK-005 | Actualizar deploy/status/CloudFront/config/CI para publications e ingesta | Sí | 2026-11-19 |
 ### Implementation Phase 3
 - GOAL-003: Validar y promover.
 | Task | Description | Completed | Date |
@@ -47,6 +47,8 @@ Implementar el diseno autorizado para clientes externos y elevar solo despues de
 ## 6. Testing
 - TEST-001: Pruebas de negocio y HTTP con SDK real, publicacion segura y fallos cerrados.
 - TEST-002: CLI/UI/SSR y canary sintetico en cada entorno.
+
+Validación local: 124 pruebas Node sin omisiones, 20 Angular, build SSR, paquetes Lambda y cfn-lint de cinco plantillas correctos. Las pruebas desplegadas del incremento y sus promociones siguen pendientes; el [informe de producción](../docs/operations/production-logsofchange.md) registra cada entorno.
 ## 7. Risks & Assumptions
 - RISK-001: Una publicacion es visible sin login; exigir accion explicita y allowlist.
 - ASSUMPTION-001: La plataforma asigna Plus y acceso inicial; no hay suscripcion cobrada ni alta publica.

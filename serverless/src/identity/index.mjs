@@ -1,10 +1,14 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { createIntegrationManagementHandler } from './integrations.mjs';
+import { integrationKeyRepository } from './key-repository.mjs';
 
 const json = (statusCode, data) => ({ statusCode, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, body: JSON.stringify(data) });
 
 export function createIdentityHandler(repository) {
+  const manage = createIntegrationManagementHandler(repository);
   return async (event) => {
+    if (event.rawPath?.startsWith('/api/v1/identity/orgs/')) return manage(event);
     const sub = event.requestContext?.authorizer?.jwt?.claims?.sub;
     if (!sub) return json(401, { error: { code: 'UNAUTHENTICATED', message: 'Inicia sesión.' } });
     try {
@@ -42,6 +46,7 @@ export function dynamoIdentityRepository(client, table) {
     return items;
   };
   return {
+    ...integrationKeyRepository(client, table),
     findMemberships: (sub) => queryAll({ IndexName: 'ActorIndex', KeyConditionExpression: 'actor = :actor', ExpressionAttributeValues: { ':actor': sub } }),
     getMembership: (org, sub) => get(`TENANT#${org}`, `MEMBER#${sub}`),
     listProjects: (org) => queryAll({ ConsistentRead: true, KeyConditionExpression: 'PK = :pk AND begins_with(SK, :prefix)', ExpressionAttributeValues: { ':pk': `TENANT#${org}`, ':prefix': 'PROJECT#' } }),
