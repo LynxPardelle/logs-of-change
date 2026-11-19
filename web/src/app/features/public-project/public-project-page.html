@@ -1,0 +1,15 @@
+<div class="shell">
+  <header class="topbar"><a class="brand" routerLink="/" aria-label="Logs of Change, inicio"><span class="brand-mark" aria-hidden="true">LC</span><span>Logs of Change<span class="brand-dot">.</span></span></a><span class="public-label">HISTORIAL PÚBLICO</span><a class="text-link" routerLink="/">Mi espacio →</a></header>
+  <main class="public-project">
+    @if (data(); as project) {
+      <header class="project-heading"><p class="eyebrow">CADA CAMBIO, UN RUMBO CLARO</p><h1>{{ project.project.name }}</h1><p>Las revisiones que este proyecto eligió compartir. Consulta su avance, sin iniciar sesión.</p></header>
+      <dl class="metrics"><div><dt>Revisiones publicadas en esta vista</dt><dd>{{ releases().length }}</dd></div><div><dt>Publicación más reciente en esta vista</dt><dd class="date">{{ latest() | date:'d MMM y' }}</dd></div></dl>
+      <section class="timeline" aria-labelledby="published-heading"><div class="section-heading"><h2 id="published-heading">Cambios que ya tienen rumbo.</h2><span>Sólo revisiones aceptadas y publicadas</span></div>@for (release of releases(); track release.id) { <article class="release-card"><div class="card-meta"><span class="badge">Revisión {{ release.revision }} · Aceptada</span><time [attr.datetime]="release.publishedAt">Publicada {{ release.publishedAt | date:'d MMM y' }}</time></div><h3>{{ release.title }}</h3>@if (release.summary) { <p class="preserve-lines">{{ release.summary }}</p> }@if (release.changes?.length) { <ul>@for (change of release.changes; track $index) { <li>{{ change }}</li> }</ul> }<footer>Aceptada {{ release.acceptedAt | date:'d MMM y' }}</footer></article> } @empty { <p class="muted">No hay revisiones publicadas en esta consulta.</p> }</section>
+      @if (project.nextCursor) { <button class="button secondary" (click)="load(true)" [disabled]="loading()">{{ loading() ? 'Cargando…' : 'Ver más publicaciones ↓' }}</button> }
+    }
+    @if (loading() && !data()) { <section class="empty-state" role="status"><p class="eyebrow">BUSCANDO EL RUMBO</p><h1>Cargando las publicaciones…</h1></section> }
+    @if (error()) { <section class="empty-state" role="status"><p class="eyebrow">HISTORIAL PÚBLICO</p><h1>Las publicaciones no están disponibles.</h1><p>{{ error() }}</p><button class="button secondary" (click)="load()" [disabled]="loading()">Volver a consultar</button><a routerLink="/">Conocer Logs of Change →</a></section> }
+    <aside class="public-note">Este espacio muestra únicamente contenido elegido para publicación. La evidencia y el expediente privado permanecen en el proyecto.</aside>
+  </main>
+  <footer class="footer"><span>Logs of Change · Un producto de Lynx Pardelle</span><span>Entregas claras. Decisiones registradas.</span></footer>
+</div>

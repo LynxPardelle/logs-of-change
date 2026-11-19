@@ -16,10 +16,15 @@ app.use((request, response, next) => {
   if (request.path.startsWith('/api/')) { response.status(404).json({ error: { code: 'NOT_FOUND', message: 'API origin required' } }); return; }
   next();
 });
-app.use(express.static(browserFolder, { maxAge: '1y', index: false, redirect: false, dotfiles: 'deny' }));
+app.use(express.static(browserFolder, { maxAge: '1y', index: false, redirect: false, dotfiles: 'deny', setHeaders(response, filePath) {
+  if (filePath === resolve(browserFolder, 'downloads/logsofchange.mjs')) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Content-Disposition', 'attachment; filename="logsofchange.mjs"');
+  }
+} }));
 app.use((request, response, next) => {
   response.setHeader('Cache-Control', 'no-store');
-  engine.handle(request).then(rendered => rendered ? writeResponseToNodeResponse(rendered, response) : next()).catch(next);
+  engine.handle(request, { publicOrigin: process.env['PUBLIC_ORIGIN'] }).then(rendered => rendered ? writeResponseToNodeResponse(rendered, response) : next()).catch(next);
 });
 if (isMainModule(import.meta.url)) {
   const port = process.env['PORT'] || 4000;

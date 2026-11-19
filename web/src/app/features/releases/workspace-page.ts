@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { Session } from '../../core/session';
 import { mayReview, statusLabel } from '../../core/product-api';
 import { ApiHealthStore } from '../health/api-health.store';
 import { ReleasesStore } from './releases.store';
 
 @Component({
-  selector: 'app-workspace-page', imports: [DatePipe], providers: [ApiHealthStore, ReleasesStore],
+  selector: 'app-workspace-page', imports: [DatePipe, RouterLink], providers: [ApiHealthStore, ReleasesStore],
   templateUrl: './workspace-page.html', styleUrl: './workspace-page.css', changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WorkspacePage {

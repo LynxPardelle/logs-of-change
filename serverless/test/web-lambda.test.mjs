@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 
 process.env.NG_ALLOWED_HOSTS = 'localhost';
 process.env.NG_TRUST_PROXY_HEADERS = 'x-forwarded-proto';
@@ -43,4 +44,44 @@ test('Lambda serves the built browser JavaScript with a static cache policy', ar
   assert.equal(result.statusCode, 200);
   assert.match(result.headers['content-type'], /javascript/);
   assert.match(result.headers['cache-control'], /max-age=31536000/);
+});
+
+test('a customer can download the portable CLI without login and without a stale static cache', artifactRequired, async () => {
+  const result = await handler(event('/downloads/logsofchange.mjs'), {});
+  assert.equal(result.statusCode, 200);
+  assert.match(result.headers['content-type'], /javascript/);
+  assert.match(result.headers['content-disposition'], /attachment/);
+  assert.equal(result.headers['cache-control'], 'no-store');
+  assert.match(body(result), /export async function submitDraft/);
+  assert.doesNotMatch(body(result), /from ['"]@/);
+});
+
+test('public Lambda SSR renders only its anonymous projection through a trusted canonical origin', artifactRequired, () => {
+  const script = `
+    import assert from 'node:assert/strict';
+    process.env.NG_ALLOWED_HOSTS = 'localhost';
+    process.env.NG_TRUST_PROXY_HEADERS = 'x-forwarded-proto';
+    process.env.PUBLIC_ORIGIN = 'https://dev.logsofchange.lynxpardelle.com';
+    let calls = 0;
+    globalThis.fetch = async (input, init) => {
+      calls++;
+      const url = typeof input === 'string' ? input : input.url || input.href;
+      assert.equal(url, 'https://dev.logsofchange.lynxpardelle.com/api/v1/public/projects/public-check?limit=20');
+      assert.equal(new Headers(init?.headers || input.headers).has('authorization'), false);
+      return Response.json({project:{slug:'public-check',name:'Public check'},releases:[{id:'11111111-1111-4111-8111-111111111111',revision:1,title:'Public check milestone',summary:'<img src=x onerror=alert(1)>',acceptedAt:'2026-11-19T00:00:00.000Z',publishedAt:'2026-11-19T00:00:00.000Z'}],nextCursor:null});
+    };
+    const {handler} = await import(${JSON.stringify(artifact.href)});
+    const response = await handler(${JSON.stringify(event('/p/public-check'))},{});
+    const html = response.isBase64Encoded ? Buffer.from(response.body,'base64').toString('utf8') : response.body;
+    assert.equal(response.statusCode,200);
+    assert.equal(calls,1);
+    assert.match(html,/Public check milestone/);
+    assert.match(html,/ng-server-context="ssr"/);
+    assert.match(html,/&lt;img/);
+    assert.doesNotMatch(html,/<img src=x onerror/);
+    process.stdout.write('public-ssr-ok');
+  `;
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8', timeout: 30000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /public-ssr-ok/);
 });

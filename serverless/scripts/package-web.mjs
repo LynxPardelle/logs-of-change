@@ -17,6 +17,8 @@ export async function packageWeb() {
   await mkdir(stage, { recursive: true });
   await cp(join(output, 'server'), join(stage, 'server'), { recursive: true });
   await cp(join(output, 'browser'), join(stage, 'browser'), { recursive: true });
+  await mkdir(join(stage, 'browser', 'downloads'), { recursive: true });
+  await cp(join(workspace, 'cli', 'logsofchange.mjs'), join(stage, 'browser', 'downloads', 'logsofchange.mjs'));
   await mkdir(join(stage, 'node_modules'), { recursive: true });
   const adapterSource = join(workspace, 'web', 'node_modules', 'serverless-http');
   const adapterPackage = JSON.parse(await readFile(join(adapterSource, 'package.json'), 'utf8'));

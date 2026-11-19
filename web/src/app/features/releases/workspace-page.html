@@ -3,6 +3,7 @@
     <a class="brand" href="/" aria-label="Logs of Change, inicio"><span class="brand-mark" aria-hidden="true">LC</span><span>Logs of Change<span class="brand-dot">.</span></span></a>
     <span class="product-tag">ENTREGAS CON EVIDENCIA</span>
     <div class="topbar-actions">
+      <a class="text-button integration-link" routerLink="/integrations">Integraciones</a>
       <span class="connection" role="status"><i [class.connected]="health.status() === 'connected'" aria-hidden="true"></i>{{ health.status() === 'connected' ? 'API disponible' : health.status() === 'checking' ? 'Conectando…' : 'Sin conexión con la API' }}</span>
       @if (session.authenticated()) { <button class="text-button" (click)="logout()">Cerrar sesión</button> }
       @else { <button class="button compact" (click)="session.login()" [disabled]="!session.ready() || !session.config()">Iniciar sesión <span aria-hidden="true">↗</span></button> }
@@ -92,5 +93,5 @@
       </section>
     </main>
   }
-  <footer class="footer"><span>Logs of Change · Un producto de Lynx Pardelle</span><span>Entregas claras. Decisiones registradas.</span></footer>
+  <footer class="footer"><span>Logs of Change · Un producto de Lynx Pardelle</span><a class="text-button" routerLink="/integrations">Integraciones y publicaciones →</a><span>Entregas claras. Decisiones registradas.</span></footer>
 </div>

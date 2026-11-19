@@ -10,6 +10,7 @@ import { DynamoDBClient, CreateBackupCommand, DescribeBackupCommand, RestoreTabl
 import { DynamoDBDocumentClient, PutCommand, QueryCommand, DeleteCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { chromium } from 'playwright';
 import { verifyActa } from '../src/evidence/index.mjs';
+import { validateProductSmokeScope, runProductSmoke, cleanupProductSmoke } from './smoke-product.mjs';
 
 const environment = process.argv.find((value) => value.startsWith('--environment='))?.split('=')[1] ?? 'development';
 if (!['development', 'testing'].includes(environment)) throw new Error('Synthetic smoke is restricted to development or testing.');
@@ -41,6 +42,7 @@ const orgId = `smoke-${runId}`;
 const projectId = 'synthetic-pilot';
 const tenantPK = `TENANT#${orgId}`;
 const projectPK = `${tenantPK}#PROJECT#${projectId}`;
+const productScope = validateProductSmokeScope(deployment, { runId, orgId, projectId, origin });
 const base = `/api/v1/orgs/${orgId}/projects/${projectId}/releases`;
 const users = [];
 const report = { product: 'Logs of Change', environment, origin, syntheticRunId: runId, startedAt: new Date().toISOString(), status: 'running',
@@ -339,6 +341,7 @@ async function cleanup() {
     try { await removePartition(accessTable, PK, 'deletedAccessRows'); }
     catch (error) { report.cleanup.failures.push({ area: 'access', name: error.name }); }
   }
+  await cleanupProductSmoke({ scope: productScope, dynamo, report });
   try {
     const projectItems = await queryPartition(releasesTable, projectPK);
     for (const item of projectItems.filter((entry) => entry.SK.startsWith('RELEASE#'))) {
@@ -480,6 +483,7 @@ try {
     await api(editor, `${resource}/submit`, { method: 'POST', body: { expectedRevision: 1 }, key: randomUUID(), accepted: [409] });
     assert.deepEqual((await api(editor, base, { method: 'POST', body: draftBody, key: createKey, accepted: [201] })).body, draft);
   });
+  await runProductSmoke({ scope: productScope, deployment, root, directory, editor, reviewer, api, check, permission, putAccess, dynamo, browser, report, openWebWorkspace, closeWebWorkspace });
   await check('project write freeze blocks commands and replays while retaining authorized reads', async () => {
     await putAccess({ PK: tenantPK, SK: `PROJECT#${projectId}`, projectId, name: 'Synthetic approval pilot', active: true, writesFrozen: true });
     await api(editor, resource);

@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { planIsPlus } from '../integrations/access.mjs';
+import { secretMatches } from '../integrations/keys.mjs';
 
 export class ApiError extends Error {
   constructor(statusCode, code, message) { super(message); this.statusCode = statusCode; this.code = code; }
@@ -61,10 +63,22 @@ function assertWritesOpen(access) {
 export function createReleasesService(repository, { now = () => new Date().toISOString(), id = randomUUID } = {}) {
   async function authorize(context, roles = readers) {
     validateContext(context);
+    if (context.kind === 'integration') fail(403, 'FORBIDDEN', 'Las integraciones sólo pueden crear borradores.');
     const access = await repository.getAccess(context.orgId, context.projectId, context.sub);
     if (access.membership?.active !== true || access.project?.active !== true || access.permission?.active !== true || !roles.includes(access.permission.role)) {
       fail(403, 'FORBIDDEN', 'No tienes acceso vigente a este proyecto.');
     }
+    return access;
+  }
+
+  async function authorizeIntegration(context) {
+    validateContext(context);
+    if (context.kind !== 'integration' || !/^[a-f0-9]{32}$/.test(context.keyId || '') || context.sub !== `integration:${context.keyId}`) fail(401, 'INTEGRATION_UNAUTHORIZED', 'La credencial de integración no es válida.');
+    const access = await repository.getIntegrationAccess(context.orgId, context.projectId, context.keyId);
+    const epoch = Math.floor(Date.parse(now()) / 1000);
+    const key = access.integrationKey;
+    if (access.project?.active !== true || key?.id !== context.keyId || key.active !== true || key.scope !== 'releases:create' || !Number.isSafeInteger(key.expiresAt) || key.expiresAt <= epoch || !secretMatches(key.secretHash, context.secretHash)) fail(401, 'INTEGRATION_UNAUTHORIZED', 'La credencial de integración no es válida.');
+    if (!planIsPlus(access.plan, epoch)) fail(403, 'PLUS_REQUIRED', 'Esta capacidad requiere Plus activo.');
     return access;
   }
 
@@ -75,8 +89,8 @@ export function createReleasesService(repository, { now = () => new Date().toISO
     return release;
   }
 
-  async function mutate(context, roles, operation, body, idempotencyKey, build) {
-    assertWritesOpen(await authorize(context, roles));
+  async function mutate(context, roles, operation, body, idempotencyKey, build, authorizeAccess = authorize) {
+    assertWritesOpen(await authorizeAccess(context, roles));
     if (typeof idempotencyKey !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(idempotencyKey)) {
       fail(400, 'VALIDATION_ERROR', 'Incluye una Idempotency-Key de 1 a 128 caracteres.');
     }
@@ -87,25 +101,45 @@ export function createReleasesService(repository, { now = () => new Date().toISO
       return receipt.response;
     }
     const saved = await repository.getReceipt(context.orgId, context.projectId, key);
-    if (saved) return replay(saved);
-    const change = await build(now());
-    const receipt = { key, digest: requestDigest, actor: context.sub, operation, response: change.response, createdAt: now() };
+    if (saved) {
+      if (context.kind === 'integration') assertWritesOpen(await authorizeAccess(context, roles));
+      return replay(saved);
+    }
     try {
-      await repository.transact({ ...change, receipt, context, roles });
+      const change = await build(now());
+      const receipt = { key, digest: requestDigest, actor: context.sub, operation, response: change.response, createdAt: now() };
+      await repository.transact({ ...change, receipt, context, roles, ...(context.kind === 'integration' ? { integrationAuthorization: { keyId: context.keyId, secretHash: context.secretHash, nowEpoch: Math.floor(Date.parse(now()) / 1000) } } : {}) });
       return change.response;
     } catch (error) {
       if (![403, 409, 423].includes(error.statusCode)) throw error;
       // A project condition may fail because its active access or freeze flag changed.
       // Reauthorize first so a revoked actor cannot inspect a project's freeze state.
-      assertWritesOpen(await authorize(context, roles));
+      assertWritesOpen(await authorizeAccess(context, roles));
       if (error.statusCode !== 409) throw error;
       const winner = await repository.getReceipt(context.orgId, context.projectId, key);
-      if (winner) return replay(winner);
+      if (winner) {
+        if (context.kind === 'integration') assertWritesOpen(await authorizeAccess(context, roles));
+        return replay(winner);
+      }
       throw error;
     }
   }
 
   return {
+    async ingest(context, body, key) {
+      if (!body || typeof body !== 'object' || Array.isArray(body)) fail(400, 'VALIDATION_ERROR', 'El cuerpo debe ser un objeto JSON.');
+      const { source, ...contentInput } = body;
+      const content = contentBody(contentInput);
+      const provenance = { kind: 'integration', keyId: context.keyId };
+      if (source !== undefined) {
+        if (!source || typeof source !== 'object' || Array.isArray(source) || Object.keys(source).some(name => !['system', 'externalId', 'revision'].includes(name))) fail(400, 'VALIDATION_ERROR', 'La procedencia no es válida.');
+        for (const [name, limit] of Object.entries({ system: 80, externalId: 200, revision: 160 })) if (source[name] !== undefined) provenance[name] = text(source[name], name, limit, true);
+      }
+      return mutate(context, [], 'ingest', { ...content, provenance }, key, async time => {
+        const release = { id: id(), orgId: context.orgId, projectId: context.projectId, ...content, provenance, revision: 1, status: 'draft', createdBy: context.sub, authoredBy: context.sub, createdAt: time, updatedAt: time, version: 1 };
+        return { release, previousVersion: null, response: { release } };
+      }, authorizeIntegration);
+    },
     async list(context, encodedCursor, requestedLimit = 20) {
       await authorize(context);
       const limit = Number(requestedLimit);
@@ -155,7 +189,7 @@ export function createReleasesService(repository, { now = () => new Date().toISO
         const previous = await releaseFor(context, releaseId);
         if (previous.revision !== number || previous.status !== 'draft') fail(409, 'CONFLICT', 'La entrega ya cambió o ya fue presentada.');
         const manifest = { schema: 'logsofchange.revision.v1', orgId: context.orgId, projectId: context.projectId, releaseId, revision: number,
-          title: previous.title, summary: previous.summary, changes: previous.changes, attachments: [], createdBy: previous.authoredBy ?? previous.createdBy, submittedBy: context.sub, submittedAt: time, source: 'native' };
+          title: previous.title, summary: previous.summary, changes: previous.changes, attachments: [], createdBy: previous.authoredBy ?? previous.createdBy, submittedBy: context.sub, submittedAt: time, source: previous.provenance?.kind === 'integration' ? 'integration' : 'native', ...(previous.provenance ? { provenance: previous.provenance } : {}) };
         const revision = { number, manifest, digest: digest(manifest), digestAlgorithm: 'SHA-256', canonicalization: 'sorted-json-v1', submittedAt: time };
         const release = { ...previous, status: 'pending_review', updatedAt: time, version: previous.version + 1 };
         return { release, revision, previousVersion: previous.version, response: { release, revision } };

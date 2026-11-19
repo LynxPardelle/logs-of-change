@@ -145,6 +145,15 @@ Resources:
             Path: /api/v1/orgs/{proxy+}
             Method: ANY
             PayloadFormatVersion: '2.0'
+        Ingestions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ReleasesApi
+            Path: /api/v1/ingestions/orgs/{orgId}/projects/{projectId}/releases
+            Method: POST
+            PayloadFormatVersion: '2.0'
+            Auth:
+              Authorizer: NONE
 
 Outputs:
   StackName:

@@ -105,6 +105,9 @@ Resources:
             - Effect: Allow
               Action: [dynamodb:GetItem, dynamodb:Query]
               Resource: [!GetAtt AccessTable.Arn, !Sub '${AccessTable.Arn}/index/ActorIndex']
+            - Effect: Allow
+              Action: [dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem]
+              Resource: !GetAtt AccessTable.Arn
       Events:
         Me:
           Type: HttpApi
@@ -112,6 +115,14 @@ Resources:
             ApiId: !Ref IdentityApi
             Path: /api/v1/identity/me
             Method: GET
+            Auth: {AuthorizationScopes: [openid]}
+        ProjectIntegrations:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref IdentityApi
+            Path: /api/v1/identity/orgs/{proxy+}
+            Method: ANY
+            PayloadFormatVersion: '2.0'
             Auth: {AuthorizationScopes: [openid]}
   IdentityLogs:
     Type: AWS::Logs::LogGroup
