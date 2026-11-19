@@ -1,5 +1,6 @@
 import { GetCommand, QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { ApiError } from './domain.mjs';
+import { plusCondition } from '../integrations/access.mjs';
 
 const projectKey = (orgId, projectId) => `TENANT#${orgId}#PROJECT#${projectId}`;
 const revisionKey = (orgId, projectId, releaseId) => `${projectKey(orgId, projectId)}#RELEASE#${releaseId}`;
@@ -17,6 +18,15 @@ export class DynamoReleasesRepository {
       this.get(this.accessTable, { PK: projectKey(orgId, projectId), SK: `PERMISSION#${sub}` }),
     ]);
     return { membership, project, permission };
+  }
+
+  async getIntegrationAccess(orgId, projectId, keyId) {
+    const [project, integrationKey, plan] = await Promise.all([
+      this.get(this.accessTable, { PK: `TENANT#${orgId}`, SK: `PROJECT#${projectId}` }),
+      this.get(this.accessTable, { PK: projectKey(orgId, projectId), SK: `INTEGRATION#${keyId}` }),
+      this.get(this.accessTable, { PK: `TENANT#${orgId}`, SK: 'PRODUCT' }),
+    ]);
+    return { project, integrationKey, plan };
   }
 
   async getRelease(orgId, projectId, id) { return (await this.get(this.releasesTable, { PK: projectKey(orgId, projectId), SK: `RELEASE#${id}` }))?.data; }
@@ -49,10 +59,10 @@ export class DynamoReleasesRepository {
     return { revisions, decisions };
   }
 
-  async transact({ context, roles, previousVersion, release, revision, decision, receipt }) {
+  async transact({ context, roles, previousVersion, release, revision, decision, receipt, integrationAuthorization }) {
     const { orgId, projectId, sub } = context;
     const permissions = Object.fromEntries(roles.map((role, index) => [`:role${index}`, role]));
-    const checks = [
+    let checks = [
       { ConditionCheck: { TableName: this.accessTable, Key: { PK: `TENANT#${orgId}`, SK: `MEMBER#${sub}` }, ConditionExpression: '#active = :active', ExpressionAttributeNames: { '#active': 'active' }, ExpressionAttributeValues: { ':active': true } } },
       { ConditionCheck: { TableName: this.accessTable, Key: { PK: `TENANT#${orgId}`, SK: `PROJECT#${projectId}` },
         ConditionExpression: '#active = :active AND (attribute_not_exists(#writesFrozen) OR #writesFrozen = :notFrozen)',
@@ -61,6 +71,17 @@ export class DynamoReleasesRepository {
         ConditionExpression: `#active = :active AND #role IN (${Object.keys(permissions).join(', ')})`,
         ExpressionAttributeNames: { '#active': 'active', '#role': 'role' }, ExpressionAttributeValues: { ':active': true, ...permissions } } },
     ];
+    if (context.kind === 'integration') {
+      if (!integrationAuthorization || integrationAuthorization.keyId !== context.keyId || context.sub !== `integration:${context.keyId}`) throw new ApiError(401, 'INTEGRATION_UNAUTHORIZED', 'La credencial no es válida.');
+      checks = [
+        checks[1],
+        { ConditionCheck: { TableName: this.accessTable, Key: { PK: projectKey(orgId, projectId), SK: `INTEGRATION#${integrationAuthorization.keyId}` },
+          ConditionExpression: '#active = :active AND #id = :id AND #scope = :scope AND #hash = :hash AND #expiresAt > :now',
+          ExpressionAttributeNames: { '#active': 'active', '#id': 'id', '#scope': 'scope', '#hash': 'secretHash', '#expiresAt': 'expiresAt' },
+          ExpressionAttributeValues: { ':active': true, ':id': integrationAuthorization.keyId, ':scope': 'releases:create', ':hash': integrationAuthorization.secretHash, ':now': integrationAuthorization.nowEpoch } } },
+        { ConditionCheck: { TableName: this.accessTable, Key: { PK: `TENANT#${orgId}`, SK: 'PRODUCT' }, ...plusCondition(integrationAuthorization.nowEpoch) } },
+      ];
+    }
     const put = (PK, SK, data) => ({ Put: { TableName: this.releasesTable, Item: { PK, SK, data }, ConditionExpression: 'attribute_not_exists(PK)' } });
     const releaseWrite = put(projectKey(orgId, projectId), `RELEASE#${release.id}`, release);
     if (previousVersion !== null) {

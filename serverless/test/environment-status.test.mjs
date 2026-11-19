@@ -13,6 +13,7 @@ const fixture = (environment = 'development') => {
     identity: { UserPoolId: 'us-east-1_example', UserPoolClientId: 'client123', Issuer: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_example', AuthDomain: `https://logsofchange-${environment}-123456789012.auth.us-east-1.amazoncognito.com`, AccessTableName: 'access', AccessTableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/access', ApiEndpoint: 'https://identity.execute-api.us-east-1.amazonaws.com', ApiDomainName: 'identity.execute-api.us-east-1.amazonaws.com' },
     releases: { ApiEndpoint: 'https://releases.execute-api.us-east-1.amazonaws.com', ApiDomainName: 'releases.execute-api.us-east-1.amazonaws.com', ReleasesTableName: 'releases', ReleasesTableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/releases', EvidenceBucketName: 'evidence' },
     evidence: { ApiEndpoint: 'https://evidence.execute-api.us-east-1.amazonaws.com', ApiDomainName: 'evidence.execute-api.us-east-1.amazonaws.com' },
+    publications: { ApiEndpoint: 'https://publications.execute-api.us-east-1.amazonaws.com', ApiDomainName: 'publications.execute-api.us-east-1.amazonaws.com', AdminTableName: 'publication-admin', AdminTableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/publication-admin', PublicTableName: 'publication-public', PublicTableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/publication-public' },
     edge: { PublicUrl: `https://${domain}`, HealthUrl: `https://${domain}/api/v1/health`, DistributionId: 'EEXAMPLE', FrontendFunctionName: 'frontend' },
   };
 };
@@ -34,17 +35,18 @@ test('CLI defaults to development and never treats unknown or invalid options as
   }
 });
 
-test('recovers a consistent public snapshot using only four read-only AWS calls', async () => {
+test('recovers a consistent public snapshot including publications using only five read-only AWS calls', async () => {
   const values = fixture(); values.identity.FutureSecret = 'must-not-be-copied';
   const calls = [];
   const snapshot = await readEnvironment('development', { runAws: runnerFor(values, calls) });
   assert.equal(snapshot.domain, 'dev.logsofchange.lynxpardelle.com');
   assert.equal(snapshot.region, 'us-east-1');
-  assert.deepEqual(snapshot.stackNames, { identity: 'logsofchange-development-identity', releases: 'logsofchange-development-releases', evidence: 'logsofchange-development-evidence', edge: 'logsofchange-development-edge' });
+  assert.deepEqual(snapshot.stackNames, { identity: 'logsofchange-development-identity', releases: 'logsofchange-development-releases', evidence: 'logsofchange-development-evidence', publications: 'logsofchange-development-publications', edge: 'logsofchange-development-edge' });
   assert.equal(snapshot.identity.UserPoolClientId, 'client123');
   assert.equal(snapshot.identity.FutureSecret, undefined);
-  assert.equal(calls.length, 4);
-  assert.deepEqual(calls.map((args) => args[args.indexOf('--stack-name') + 1]).sort(), ['edge', 'evidence', 'identity', 'releases'].map((service) => `logsofchange-development-${service}`).sort());
+  assert.equal(snapshot.publications.PublicTableName, 'publication-public');
+  assert.equal(calls.length, 5);
+  assert.deepEqual(calls.map((args) => args[args.indexOf('--stack-name') + 1]).sort(), ['edge', 'evidence', 'identity', 'releases', 'publications'].map((service) => `logsofchange-development-${service}`).sort());
   for (const args of calls) {
     assert.deepEqual(args.slice(0, 2), ['cloudformation', 'describe-stacks']);
     assert.deepEqual(args.slice(-4), ['--region', 'us-east-1', '--output', 'json']);
@@ -99,6 +101,7 @@ test('optional writer creates only the fixed ignored output path and rejects inv
 test('deployment arguments reject unknown options, duplicate selectors and implicit production approval', () => {
   assert.deepEqual(parseDeployArguments([]), { environment: 'development', service: 'all', approveProduction: false });
   assert.deepEqual(parseDeployArguments(['--environment=production', '--approve-production=true', '--service=edge']), { environment: 'production', service: 'edge', approveProduction: true });
+  assert.equal(parseDeployArguments(['--service=publications']).service, 'publications');
   for (const args of [['--environment=prod'], ['--service=unknown'], ['--region=eu-west-1'], ['--approve-production=false'], ['--environment=development', '--environment=testing'], ['--hosted-zone-id=../unsafe']]) {
     assert.throws(() => parseDeployArguments(args));
   }
