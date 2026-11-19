@@ -1,89 +1,76 @@
 ---
-goal: Migrar por etapas Logs of Change a una API de revisión de entregas
-version: '1.0'
+goal: Logs of Change - microservicios en AWS con Angular SSR en Lambda y revisión de entregas
+version: '2.0'
 date_created: 2026-11-17
+date_updated: 2026-11-19
 status: 'In progress'
-tags: [architecture, migration, feature]
+tags: [architecture, microservices, serverless, angular, migration, feature]
 ---
 
-# Introduction
+# Plan de Logs of Change
 
-![Estado en curso](https://img.shields.io/badge/status-in_progress-yellow)
+El producto conserva su nombre original **Logs of Change**, identificador `logs-of-change`, y su referencia personal a Wind of Change. HitoClaro queda únicamente como prefijo físico de compatibilidad del entorno AWS existente. Arquitectura objetivo: servicios independientes de identidad, entregas y evidencia con API Gateway/Lambda, DynamoDB por servicio y frontend Angular SSR servido con Lambda detrás de CloudFront OAC. La carpeta, el remoto histórico, el backend NestJS y la rama `architecture/serverless-product-foundation` se conservan. [Decisión vigente](../docs/architecture/adr/0003-logs-of-change-identidad.md).
 
-El primer paso establece rutas y herramientas de validación locales en la rama `architecture/serverless-product-foundation`. Las fases posteriores definen las condiciones para probar un proyecto piloto.
+## Requisitos y restricciones
 
-## 1. Requirements & Constraints
+- **REQ-001** Angular 22 + NgRx SignalStore, SSR real en Lambda Node.js24 ARM64 y APIs relativas del mismo origen.
+- **REQ-002** Microservicios con plantillas SAM, APIs, permisos y despliegues propios; evidencia consulta HTTP de entregas, sin acceso a su tabla.
+- **REQ-003** Un manifiesto inmutable identifica cada revisión presentada. La decisión conserva actor, fecha y digest de esa versión.
+- **REQ-004** Reintentos idempotentes y concurrencia transaccional; una única decisión por revisión y prohibición de autoaprobación.
+- **SEC-001** OIDC Code+PKCE, JWT de acceso, pertenencia y rol activos por organización/proyecto en lecturas y comandos.
+- **CON-001** Preservar contratos y árbol heredados, fuentes en sólo lectura y un escritor por entidad durante la migración.
+- **CON-002** No aceptar adjuntos sin verificar bytes, tipo/tamaño/hash y versión S3.
+- **OPS-001** Promoción **development → testing → main**. Stacks y dominios aislados; no sustituir recursos de otros proyectos.
+- **OPS-002** Desarrollo `dev.hitoclaro.lynxpardelle.com`, pruebas `test.hitoclaro.lynxpardelle.com`, producción `hitoclaro.lynxpardelle.com`; ACM en us-east-1 y DNS propio.
 
-- **REQ-001** La Lambda de salud y la SPA identifican el mismo contrato HTTP.
-- **CON-001** Conservar el árbol y los contratos NestJS mientras se verifican los read models.
-- **SEC-001** Verificar identidad, pertenencia y permiso de proyecto para operaciones protegidas.
-- **REQ-002** Una decisión y su versión son consultables con integridad comprobable.
-- **REQ-003** Resolver reintentos y concurrencia sin repetir decisiones.
-- **PAT-001** Aislar el tráfico por ruta y proyecto. Mantener un escritor por entidad.
+## Fase 1: base inicial
 
-## 2. Implementation Steps
+| Tarea | Entregable | Estado |
+| --- | --- | --- |
+| TASK-001 | SAM y GET /api/v1/health con contrato e infraestructura validados | Completada inicialmente 2026-11-17; identidad actual logs-of-change |
+| TASK-002 | Angular + SignalStore y pruebas de salud/fallo/reintento | Completada inicialmente 2026-11-17; ampliada a SSR y producto |
+| TASK-003 | Producto, arquitectura, inventario y decisión de migración | Completada; actualizada con ADR0002 y separación de microservicios |
 
-### Implementation Phase 1
+## Fase 2: identidad, lectura y conciliación
 
-- **GOAL-001** Establecer el contrato de salud local y verificar la consola sin credenciales.
+| Tarea | Entregable | Estado |
+| --- | --- | --- |
+| TASK-004 | Cognito, AccessTable, tabla de entregas y bucket privado; lecturas con membresía/proyecto/rol y acceso cruzado | Implementada y desplegada en development; lectura, JWT y aislamiento comprobados en smoke real sintético |
+| TASK-005 | Exportar explícitamente una fuente de sólo lectura, normalizar, detectar huérfanos/colisiones y conciliar | Herramientas y fixture sintético implementados; **pendiente exportación de origen real, carga acotada y paridad del piloto** |
+| TASK-006 | Contrato HTTP v1 y selección de lectura reversible por proyecto | Contrato publicado en docs; **pendiente selector origen/proyección y demostración de reversión del piloto** |
 
-| Task | Description | Completed | Date |
-| --- | --- | --- | --- |
-| TASK-001 | Definir `serverless/template.yaml` y `serverless/src/health/index.mjs`. Validar plantilla con cfn-lint y contrato con `node --test serverless/test/health.test.mjs`. | Sí | 2026-11-17 |
-| TASK-002 | Implementar la pantalla inicial con SignalStore en `web/src/app/features/health/`. Confirmar compilación de producción y tests de apertura, fallo, reintento y respuesta de otro servicio. | Sí | 2026-11-17 |
-| TASK-003 | Documentar criterios de producto, inventario de contratos y decisión en `docs/product/` y `docs/architecture/`. | Sí | 2026-11-17 |
+## Fase 3: flujo de revisión
 
-### Implementation Phase 2
+| Tarea | Entregable | Estado |
+| --- | --- | --- |
+| TASK-007 | Presentación, decisión, nuevas revisiones y recibos idempotentes; carreras y clave con cuerpo diferente | Implementada, pruebas locales y cloud pasadas: idempotencia, carreras, historial y decisión única |
+| TASK-008 | UI de entregas/revisiones y acta verificable; validar AC01-06 | UI, decisiones y acta JSON probadas en desarrollo; **pendiente: carga/verificación de medios S3, AC02 sobre adjuntos y aceptación de AC06 con piloto real** |
+| TASK-009 | Autoridad de escritura, recuperación, congelación de comandos y corte por proyecto | Runbook, congelación y recuperación en tabla nueva comprobados con datos sintéticos; **pendiente autoridad y autorización de corte del proyecto real** |
 
-- **GOAL-002** Probar autorización por organización y conciliación de una lectura piloto. Depende de la fase 1.
+## Fase 4: frontend en Lambda y operación
 
-| Task | Description | Completed | Date |
-| --- | --- | --- | --- |
-| TASK-004 | Añadir a `serverless/template.yaml` recursos aislados de prueba para Cognito, tabla bajo demanda y bucket privado. Crear una ruta de lectura en `serverless/src/releases/` con pruebas de membresía, rol de proyecto y acceso cruzado. | Pendiente | — |
-| TASK-005 | Crear `serverless/scripts/migration/` para exportar de solo lectura, normalizar y producir un informe con conteos, huérfanos y colisiones. Cargar el fixture en entorno aislado y comparar contra la lectura del origen para el proyecto piloto. | Pendiente | — |
-| TASK-006 | Publicar contratos versionados de la ruta de lectura en `docs/architecture/contracts/`. Activar solo después de demostrar paridad del proyecto y reversión de la selección de origen. | Pendiente | — |
+| Tarea | Entregable | Estado |
+| --- | --- | --- |
+| TASK-010 | Marca Logs of Change en paquetes/UI/salud/documentos y dominio por entorno | Implementada la vuelta a Logs of Change; nombres físicos AWS conservados para continuidad, con guiños originales a cambios y rumbo |
+| TASK-011 | Angular SSR Lambda, CloudFront OAC, certificado y DNS; configuración pública y PKCE | Implementada y desplegada en development; SSR, DNS/TLS, login/callback y QA escritorio/móvil comprobados |
+| TASK-012 | Artefactos reproducibles, despliegue independiente y validación CI | Scripts y workflow implementados; CI valida el HEAD publicado de la rama. Ver REMOTE_HANDOFF.md para reproducir y recuperar outputs sin redesplegar |
+| TASK-013 | Smoke con identidades sintéticas, TLS/DNS, flujo de revisión y evidencia íntegra | Completada en development:12 comprobaciones finales y recuperación real de datos sintéticos en tabla nueva; [evidencia](../docs/operations/verification-2026-11-19.md). No representa aceptación del piloto real |
+| TASK-014 | Promover a testing y después main, con observabilidad y revisión del piloto | **Pendiente**; no se eleva desde la rama de arquitectura automáticamente |
 
-### Implementation Phase 3
+## Primer flujo pendiente tras la base implementada
 
-- **GOAL-003** Completar el flujo de aprobación para un proyecto. Depende de la fase 2.
+Seleccionar un proyecto piloto y su organización, obtener una exportación autorizada, validar la proyección y conciliar contra el origen real (TASK-005), seguido del selector reversible (TASK-006). Los siguientes incrementos de código independientes son cargas privadas con versiones verificadas (TASK-008) y gestión administrativa de invitaciones sin habilitar acceso público.
 
-| Task | Description | Completed | Date |
-| --- | --- | --- | --- |
-| TASK-007 | Implementar presentación y decisión con recibo idempotente, condición de revisión y transacción en `serverless/src/releases/`. Comprobar las carreras de dos revisores y la repetición de una clave con un cuerpo distinto. | Pendiente | — |
-| TASK-008 | Implementar UI de entregas y revisiones en `web/src/app/features/releases/`, validación de referencias a versiones de medios y acta exportable. Ejecutar AC-01 a AC-06 del documento de producto. | Pendiente | — |
-| TASK-009 | Registrar la autoridad de escritura para el piloto, demostrar recuperación de datos y aprobar el corte por proyecto. Documentar cómo congelar los comandos y conservar decisiones al revertir el acceso. | Pendiente | — |
+No se considera completado un criterio por existir su plantilla o por pasar un fixture sintético. Los resultados ejecutados y los recursos efectivamente desplegados viven en el [informe de verificación](../docs/operations/verification-2026-11-19.md).
 
-## 3. Alternatives
+## Validación
 
-- **ALT-001** Conservar NestJS completo en Lambda. Conserva código pero acopla la nueva frontera al arranque y al esquema heredados.
-- **ALT-002** Cortar todos los proyectos de una vez. Entrelaza el lanzamiento con la reconciliación de todos los datos existentes.
+`node --test serverless/test/*.test.mjs`, tests Angular y build SSR, pruebas de invocación del bundle Lambda, cfn-lint de los cuatro templates y smoke desplegado con usuarios/datos sintéticos. Validaciones de datos reales, restore y corte se consignan con su alcance exacto.
 
-## 4. Dependencies
+## Operación y límites
 
-- **DEP-001** Node.js 24 y npm. El cliente Angular usa sus propias dependencias y lockfile.
-- **DEP-002** AWS SAM y Docker para emular AWS localmente. El contrato del handler también se prueba con Node.js.
-- **DEP-003** Proyecto piloto y un mapeo de organización verificado para cualquier operación de migración de datos.
+No se migra tráfico del backend NestJS ni se modifican sus claves. No se inventan decisiones importadas. La publicación productiva requiere rama main y revisión explícita; la elección de marca no demuestra disponibilidad registral. [Runbook](../docs/operations/runbook.md), [Contrato](../docs/architecture/contracts/releases-v1.md), [Migración](../serverless/scripts/migration/README.md).
 
-## 5. Files
+## Continuación remota
 
-- **FILE-001** `serverless/template.yaml` contiene los recursos iniciales.
-- **FILE-002** `web/` contiene la SPA y sus pruebas.
-- **FILE-003** `docs/architecture/ARCHITECTURE.md` documenta contratos, riesgos y reversión.
-
-## 6. Testing
-
-- **TEST-001** Prueba del contrato de salud y lint de la plantilla.
-- **TEST-002** Compilación de producción y pruebas de UI para la ruta inicial.
-- **TEST-003** Contratos de lectura, aislamiento entre organizaciones, reintentos, carreras y restauración para las rutas de negocio.
-
-## 7. Risks & Assumptions
-
-- **RISK-001** Las claves globales y las relaciones heredadas requieren validación antes de habilitar las rutas nuevas.
-- **RISK-002** Conservar un escritor por entidad evita divergencia entre orígenes.
-- **ASSUMPTION-001** La primera evidencia pertenece al piloto y la operación se evalúa dentro de un solo proyecto.
-
-## 8. Related Specifications / Further Reading
-
-- [Producto y criterios de aceptación](../docs/product/aprobacion-entregas.md)
-- [Arquitectura](../docs/architecture/ARCHITECTURE.md)
-- [ADR 0001](../docs/architecture/adr/0001-migracion-incremental.md)
+La rama se publica como architecture/serverless-product-foundation. [REMOTE_HANDOFF.md](../REMOTE_HANDOFF.md) contiene checkout, pruebas, consulta de outputs públicos AWS y pendientes. La integración se revisa primero contra development; no se modifica el orden development → testing → main.

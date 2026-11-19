@@ -1,11 +1,14 @@
 flowchart LR
-    A["Equipo y revisor del cliente"] --> W["Angular"]
-    W -->|Hoy: salud pública| H["API Gateway HTTP API + Lambda de salud"]
-    W -.->|Fase futura: OIDC| C["Cognito"]
-    W -.->|Fase futura: API v1 protegida| P["Lambda de entregas y revisión"]
-    P -.->|Transacciones y consultas acotadas| D["DynamoDB por organización"]
-    P -.->|Referencias a versiones verificadas| B["S3 privado"]
-    X["Integraciones existentes"] --> N["NestJS existente"]
-    N --> M["MongoDB o DAO de archivos JSON"]
-    M -.->|Exportación en solo lectura y conciliación| I["Importador fuera del tráfico"]
-    I -.->|Historial con procedencia| D
+  U[Agencia y cliente] --> CF[CloudFront + ACM + Route 53]
+  CF -->|HTML y assets| SSR[Angular SSR Lambda / URL IAM + OAC]
+  CF -->|salud y config| EDGE[Edge HTTP API + Lambdas]
+  CF -->|identity| ID[Identity HTTP API + Lambda]
+  CF -->|orgs| REL[Releases HTTP API + Lambda]
+  CF -->|evidence| EV[Evidence HTTP API + Lambda]
+  U -->|Code + PKCE| COG[Cognito]
+  ID --> ACL[AccessTable]
+  REL -->|validación y ConditionCheck| ACL
+  REL --> DB[ReleasesTable / transacciones]
+  EV -->|JWT original / reautorizar| REL
+  LEG[NestJS / origen heredado] -.->|export explícito sólo lectura| MIG[Normalizador offline]
+  MIG -.->|pendiente piloto real| DB

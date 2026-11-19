@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Logs of Change delivery revisions and decisions microservice.
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [development, testing, production]
+    Default: development
+  UserPoolId:
+    Type: String
+  UserPoolClientId:
+    Type: String
+  AccessTableName:
+    Type: String
+  AccessTableArn:
+    Type: String
+
+Resources:
+  ReleasesApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 30
+        ThrottlingRateLimit: 20
+      Auth:
+        DefaultAuthorizer: CognitoAccess
+        Authorizers:
+          CognitoAccess:
+            IdentitySource: $request.header.Authorization
+            AuthorizationScopes: [openid]
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}/${UserPoolId}'
+              audience: [!Ref UserPoolClientId]
+
+  ReleasesTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      DeletionProtectionEnabled: true
+      Tags:
+        - Key: Product
+          Value: Logs of Change
+        - Key: Environment
+          Value: !Ref Environment
+
+  EvidenceBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Product
+          Value: Logs of Change
+        - Key: Environment
+          Value: !Ref Environment
+
+  EvidenceBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref EvidenceBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: RequireTLS
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt EvidenceBucket.Arn
+              - !Sub '${EvidenceBucket.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  ReleasesLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/hitoclaro-${Environment}-releases'
+      RetentionInDays: 14
+
+  ReleasesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'hitoclaro-${Environment}-releases'
+      CodeUri: ../../.build/backend/
+      Handler: releases/index.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 256
+      Timeout: 10
+      Environment:
+        Variables:
+          ACCESS_TABLE_NAME: !Ref AccessTableName
+          RELEASES_TABLE_NAME: !Ref ReleasesTable
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Ref ReleasesLogGroup
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:ConditionCheckItem]
+              Resource: !Ref AccessTableArn
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:ConditionCheckItem]
+              Resource: !GetAtt ReleasesTable.Arn
+      Events:
+        Releases:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ReleasesApi
+            Path: /api/v1/orgs/{proxy+}
+            Method: ANY
+            PayloadFormatVersion: '2.0'
+
+Outputs:
+  ApiEndpoint:
+    Value: !Sub 'https://${ReleasesApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+  ApiDomainName:
+    Value: !Sub '${ReleasesApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+  ReleasesTableName:
+    Value: !Ref ReleasesTable
+  ReleasesTableArn:
+    Value: !GetAtt ReleasesTable.Arn
+  EvidenceBucketName:
+    Value: !Ref EvidenceBucket

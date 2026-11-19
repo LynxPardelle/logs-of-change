@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Logs of Change identity microservice, scoped independently per environment.
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [development, testing, production]
+    Default: development
+  PublicOrigin:
+    Type: String
+    AllowedPattern: 'https://[a-z0-9.-]+\.lynxpardelle\.com'
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: !Sub 'hitoclaro-${Environment}'
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 14
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      UserPoolTier: LITE
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: !Sub 'hitoclaro-${Environment}-web'
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      AccessTokenValidity: 15
+      IdTokenValidity: 15
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email, profile]
+      SupportedIdentityProviders: [COGNITO]
+      CallbackURLs:
+        - !Sub '${PublicOrigin}/auth/callback'
+      LogoutURLs:
+        - !Sub '${PublicOrigin}/'
+      ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH, ALLOW_ADMIN_USER_PASSWORD_AUTH]
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: !Sub 'hitoclaro-${Environment}-${AWS::AccountId}'
+  AccessTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: PK, AttributeType: S}
+        - {AttributeName: SK, AttributeType: S}
+        - {AttributeName: actor, AttributeType: S}
+      KeySchema:
+        - {AttributeName: PK, KeyType: HASH}
+        - {AttributeName: SK, KeyType: RANGE}
+      GlobalSecondaryIndexes:
+        - IndexName: ActorIndex
+          KeySchema:
+            - {AttributeName: actor, KeyType: HASH}
+            - {AttributeName: PK, KeyType: RANGE}
+          Projection: {ProjectionType: ALL}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+      SSESpecification: {SSEEnabled: true}
+  IdentityApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      DefaultRouteSettings: {ThrottlingBurstLimit: 20, ThrottlingRateLimit: 10}
+      Auth:
+        DefaultAuthorizer: Cognito
+        Authorizers:
+          Cognito:
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'
+              audience: [!Ref UserPoolClient]
+            IdentitySource: '$request.header.Authorization'
+  IdentityFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../.build/backend
+      Handler: identity/index.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          ACCESS_TABLE_NAME: !Ref AccessTable
+      LoggingConfig: {LogFormat: JSON, LogGroup: !Ref IdentityLogs}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:Query]
+              Resource: [!GetAtt AccessTable.Arn, !Sub '${AccessTable.Arn}/index/ActorIndex']
+      Events:
+        Me:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref IdentityApi
+            Path: /api/v1/identity/me
+            Method: GET
+            Auth: {AuthorizationScopes: [openid]}
+  IdentityLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/hitoclaro/${Environment}/identity'
+      RetentionInDays: 14
+Outputs:
+  UserPoolId: {Value: !Ref UserPool}
+  UserPoolClientId: {Value: !Ref UserPoolClient}
+  Issuer: {Value: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}'}
+  AuthDomain: {Value: !Sub 'https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com'}
+  AccessTableName: {Value: !Ref AccessTable}
+  AccessTableArn: {Value: !GetAtt AccessTable.Arn}
+  ApiEndpoint: {Value: !Sub 'https://${IdentityApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}
+  ApiDomainName: {Value: !Sub '${IdentityApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}

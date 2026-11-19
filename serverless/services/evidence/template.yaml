@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Logs of Change evidence microservice. Reads through authorized release API, no shared database.
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [development, testing, production]
+    Default: development
+  UserPoolId: {Type: String}
+  UserPoolClientId: {Type: String}
+  ReleasesApiEndpoint: {Type: String}
+Resources:
+  EvidenceApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      DefaultRouteSettings: {ThrottlingBurstLimit: 20, ThrottlingRateLimit: 10}
+      Auth:
+        DefaultAuthorizer: Cognito
+        Authorizers:
+          Cognito:
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPoolId}'
+              audience: [!Ref UserPoolClientId]
+            IdentitySource: '$request.header.Authorization'
+  EvidenceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../.build/backend
+      Handler: evidence/index.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 128
+      Timeout: 10
+      Environment:
+        Variables:
+          RELEASES_API_ENDPOINT: !Ref ReleasesApiEndpoint
+      LoggingConfig: {LogFormat: JSON, LogGroup: !Ref EvidenceLogs}
+      Events:
+        Acta:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref EvidenceApi
+            Path: '/api/v1/evidence/{proxy+}'
+            Method: GET
+            Auth: {AuthorizationScopes: [openid]}
+  EvidenceLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/hitoclaro/${Environment}/evidence'
+      RetentionInDays: 14
+Outputs:
+  ApiEndpoint: {Value: !Sub 'https://${EvidenceApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}
+  ApiDomainName: {Value: !Sub '${EvidenceApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'}

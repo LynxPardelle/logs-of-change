@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { inject, PLATFORM_ID } from '@angular/core';
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { EMPTY, catchError, pipe, switchMap, tap } from 'rxjs';
@@ -32,7 +33,7 @@ export const ApiHealthStore = signalStore(
       ),
     ),
   })),
-  withHooks({ onInit: (store) => store.check() }),
+  withHooks({ onInit: (store) => { if (isPlatformBrowser(inject(PLATFORM_ID))) store.check(); } }),
 );
 
 function isProductHealth(response: unknown): boolean {

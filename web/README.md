@@ -1,30 +1,43 @@
 # Consola de Logs of Change
 
-Angular standalone 22.2.6 con CLI 22.2.7 y NgRx SignalStore 22.0.1. Usa Node.js 24.15 o posterior dentro de Node.js 24. [Compatibilidad Angular](https://angular.dev/reference/versions)
+Angular standalone **22.2.6**, Angular SSR y CLI **22.2.7**, NgRx SignalStore **22.0.1**, Node.js 24. El frontend se renderiza en una Lambda de Node.js 24/ARM64 detrás de CloudFront con Function URL autenticada mediante IAM/OAC. El mismo origen público encamina `/api/v1/*` a los servicios. El adaptador usa `AngularNodeAppEngine`, Express y `serverless-http`; el artefacto incluye `server/` y `browser/`.
 
-Desde la raíz del repo, iniciar el backend local en una terminal.
+## Desarrollo local
 
-```sh
-node serverless/scripts/serve-health.mjs
-```
-
-En otra terminal, instalar el lockfile y abrir la aplicación.
+Desde `web/`:
 
 ```sh
-cd web
 npm ci
 npm start
 ```
 
-La consola se abre en [localhost:4200](http://localhost:4200/). La configuración de desarrollo reenvía `/api/v1/**` al backend en `127.0.0.1:3001`. También se puede exponer la plantilla con `sam local start-api --template serverless/template.yaml --port 3001` desde la raíz, cuando SAM CLI y Docker estén instalados. Usar uno de los dos servidores en ese puerto.
+El proxy de desarrollo usa `127.0.0.1:3001` para `/api/v1/**`. El backend de salud mínimo se inicia desde la raíz con `node serverless/scripts/serve-health.mjs`. Para entrar con Cognito y consultar entregas hacen falta los servicios de identidad y entregas y la configuración pública de ese entorno; el servidor de salud solo no los sustituye.
+
+## Verificación y artefacto Lambda
 
 ```sh
-npm run build
+cd web
 npm test -- --watch=false
+npm run build
+npm run package:lambda
+cd ..
+node --test serverless/test/web-lambda.test.mjs
 ```
 
-Los tests comprueban arranque, fallo, reintento y el estado que se muestra al cargar la ruta.
+La salida de Angular queda en `web/dist/logs-of-change-web/`; el empaquetador crea `serverless/.build/web/` con `index.handler` y un manifiesto SHA-256. Puede usarse como `CodeUri` de SAM o empaquetarse para Lambda. No requiere instalar las dependencias heredadas de NestJS.
 
-## Comprobación local del 17 de noviembre de 2026
+`NG_ALLOWED_HOSTS` debe incluir los hosts que el SSR recibe. Si el proxy envía encabezados confiables, configurar explícitamente `NG_TRUST_PROXY_HEADERS` de acuerdo con ese proxy. Las páginas HTML usan `Cache-Control: no-store`; los assets con hash usan caché larga. Las solicitudes `/api/*` nunca reciben el HTML de la SPA desde la Lambda del frontend.
 
-La compilación de producción, las pruebas de Angular y la consulta HTTP de salud a través del proxy local pasaron en Node.js 24.22.2. `npm audit --omit=dev` devolvió cero hallazgos para las dependencias de producción. La auditoría completa reportó 12 hallazgos altos en la cadena de herramientas de desarrollo, con `picomatch@4.0.7` como dependencia transitiva. El registro publicaba esa misma versión como estable y la auditoría no ofrecía una actualización aplicable en Angular 22 para esa cadena.
+## Acceso y recorrido
+
+La configuración pública se obtiene de `GET /api/v1/config`; contiene el entorno y los identificadores públicos de Cognito. El acceso usa Authorization Code con PKCE mediante `oidc-client-ts`, callback `/auth/callback`, validación de `state` y almacenamiento de estado OIDC en `sessionStorage`. El token de acceso también vive en la sesión del navegador; se elimina el `refresh_token` antes de guardar cualquier usuario y no se activa renovación silenciosa. El backend vuelve a verificar el token y los permisos en cada operación.
+
+La consola carga los proyectos autorizados de `GET /api/v1/identity/me`. Permite crear un borrador, presentarlo, registrar una aceptación o pedir cambios con motivo, preparar una nueva revisión y descargar el acta JSON de una decisión. Las acciones visibles dependen del rol, pero la autorización real pertenece a los servicios. El autor de una entrega no recibe la acción de aprobarla. Todavía no hay carga de adjuntos desde la consola.
+
+Cada mutación envía `Idempotency-Key`. Ante un fallo de transporte o del servidor, el cliente conserva la clave mientras se reintente la misma operación y el mismo cuerpo. Si cambia el proyecto, descarta respuestas antiguas para evitar mezclar información. Una sesión cerrada limpia los datos seleccionados. Los conflictos de revisión piden actualizar antes de continuar.
+
+La verificación local cubre el contrato de salud, autenticación HTTP de las operaciones, reintento idempotente, conflicto de revisión, aislamiento del estado entre proyectos y renderizado SSR del artefacto Lambda. La aceptación completa en un navegador con una cuenta real y el corte del piloto se documentan por separado en el plan general.
+
+## Identidad del producto
+
+El nombre **Logs of Change** vuelve por preferencia de su autor y por la inspiración de «Wind of Change», de Scorpions. El guiño de la interfaz, «Que cada cambio encuentre su rumbo», es texto propio; no se incluyen letras, audio ni material gráfico de la canción. La infraestructura existente puede conservar identificadores técnicos anteriores sin cambiar la marca pública.

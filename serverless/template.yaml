@@ -1,42 +1,401 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Logs of Change product API foundation.
-
+Description: Logs of Change edge and Angular SSR microservice. Independent identity, releases
+  and evidence origins.
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+    - development
+    - testing
+    - production
+    Default: development
+  DomainName:
+    Type: String
+    AllowedValues:
+    - dev.hitoclaro.lynxpardelle.com
+    - test.hitoclaro.lynxpardelle.com
+    - hitoclaro.lynxpardelle.com
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+  IdentityApiDomainName:
+    Type: String
+  ReleasesApiDomainName:
+    Type: String
+  EvidenceApiDomainName:
+    Type: String
+  AuthIssuer:
+    Type: String
+  AuthClientId:
+    Type: String
+  AuthDomain:
+    Type: String
 Resources:
   ProductApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: $default
-
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
   HealthFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/health/
-      Handler: index.handler
+      CodeUri: .build/backend
+      Handler: health/index.handler
       Runtime: nodejs24.x
       Architectures:
-        - arm64
+      - arm64
       MemorySize: 128
       Timeout: 5
       LoggingConfig:
         LogFormat: JSON
-        LogGroup: !Ref HealthLogGroup
+        LogGroup:
+          Ref: EdgeLogs
       Events:
         Health:
           Type: HttpApi
           Properties:
-            ApiId: !Ref ProductApi
+            ApiId:
+              Ref: ProductApi
             Method: GET
             Path: /api/v1/health
-            PayloadFormatVersion: '2.0'
-
-  HealthLogGroup:
+  ConfigFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/backend
+      Handler: config/index.handler
+      Runtime: nodejs24.x
+      Architectures:
+      - arm64
+      MemorySize: 128
+      Timeout: 5
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup:
+          Ref: EdgeLogs
+      Environment:
+        Variables:
+          ENVIRONMENT:
+            Ref: Environment
+          PUBLIC_ORIGIN:
+            Fn::Sub: https://${DomainName}
+          AUTH_ISSUER:
+            Ref: AuthIssuer
+          AUTH_CLIENT_ID:
+            Ref: AuthClientId
+          AUTH_DOMAIN:
+            Ref: AuthDomain
+      Events:
+        Config:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: ProductApi
+            Method: GET
+            Path: /api/v1/config
+  FrontendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/web
+      Handler: index.handler
+      Runtime: nodejs24.x
+      Architectures:
+      - arm64
+      MemorySize: 512
+      Timeout: 15
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup:
+          Ref: FrontendLogs
+      Description: Logs of Change Angular SSR
+      Environment:
+        Variables:
+          NODE_ENV: production
+          NG_ALLOWED_HOSTS:
+            Fn::Sub: ${DomainName},*.lambda-url.${AWS::Region}.on.aws
+          NG_TRUST_PROXY_HEADERS: x-forwarded-host,x-forwarded-proto,x-forwarded-for,x-forwarded-port
+  FrontendUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      AuthType: AWS_IAM
+      TargetFunctionArn:
+        Ref: FrontendFunction
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName:
+        Ref: DomainName
+      ValidationMethod: DNS
+      DomainValidationOptions:
+      - DomainName:
+          Ref: DomainName
+        HostedZoneId:
+          Ref: HostedZoneId
+  FrontendOac:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name:
+          Fn::Sub: hitoclaro-${Environment}-ssr
+        OriginAccessControlOriginType: lambda
+        SigningBehavior: always
+        SigningProtocol: sigv4
+  NoCache:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name:
+          Fn::Sub: hitoclaro-${Environment}-no-cache
+        DefaultTTL: 0
+        MinTTL: 0
+        MaxTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+          EnableAcceptEncodingGzip: false
+          EnableAcceptEncodingBrotli: false
+  ViewerRequest:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name:
+          Fn::Sub: hitoclaro-${Environment}-viewer-except-host
+        CookiesConfig:
+          CookieBehavior: all
+        HeadersConfig:
+          HeaderBehavior: allExcept
+          Headers:
+          - host
+        QueryStringsConfig:
+          QueryStringBehavior: all
+  SecurityHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name:
+          Fn::Sub: hitoclaro-${Environment}-security
+        SecurityHeadersConfig:
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: no-referrer
+            Override: true
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            Override: true
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment:
+          Fn::Sub: 'Logs of Change ${Environment}: SSR and isolated microservice APIs'
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        Aliases:
+        - Ref: DomainName
+        ViewerCertificate:
+          AcmCertificateArn:
+            Ref: Certificate
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        Origins:
+        - Id: frontend
+          DomainName:
+            Fn::Select:
+            - 2
+            - Fn::Split:
+              - /
+              - Fn::GetAtt:
+                - FrontendUrl
+                - FunctionUrl
+          CustomOriginConfig:
+            OriginProtocolPolicy: https-only
+            OriginSSLProtocols:
+            - TLSv1.2
+          OriginAccessControlId:
+            Ref: FrontendOac
+        - Id: edge
+          DomainName:
+            Fn::Sub: ${ProductApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+          CustomOriginConfig:
+            OriginProtocolPolicy: https-only
+            OriginSSLProtocols:
+            - TLSv1.2
+        - Id: identity
+          DomainName:
+            Ref: IdentityApiDomainName
+          CustomOriginConfig:
+            OriginProtocolPolicy: https-only
+            OriginSSLProtocols:
+            - TLSv1.2
+        - Id: releases
+          DomainName:
+            Ref: ReleasesApiDomainName
+          CustomOriginConfig:
+            OriginProtocolPolicy: https-only
+            OriginSSLProtocols:
+            - TLSv1.2
+        - Id: evidence
+          DomainName:
+            Ref: EvidenceApiDomainName
+          CustomOriginConfig:
+            OriginProtocolPolicy: https-only
+            OriginSSLProtocols:
+            - TLSv1.2
+        DefaultCacheBehavior:
+          TargetOriginId: frontend
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          CachePolicyId:
+            Ref: NoCache
+          OriginRequestPolicyId:
+            Ref: ViewerRequest
+          ResponseHeadersPolicyId:
+            Ref: SecurityHeaders
+          Compress: true
+        CacheBehaviors:
+        - PathPattern: /api/v1/identity/*
+          TargetOriginId: identity
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          - PUT
+          - POST
+          - PATCH
+          - DELETE
+          CachePolicyId:
+            Ref: NoCache
+          OriginRequestPolicyId:
+            Ref: ViewerRequest
+          ResponseHeadersPolicyId:
+            Ref: SecurityHeaders
+          Compress: true
+        - PathPattern: /api/v1/orgs/*
+          TargetOriginId: releases
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          - PUT
+          - POST
+          - PATCH
+          - DELETE
+          CachePolicyId:
+            Ref: NoCache
+          OriginRequestPolicyId:
+            Ref: ViewerRequest
+          ResponseHeadersPolicyId:
+            Ref: SecurityHeaders
+          Compress: true
+        - PathPattern: /api/v1/evidence/*
+          TargetOriginId: evidence
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          CachePolicyId:
+            Ref: NoCache
+          OriginRequestPolicyId:
+            Ref: ViewerRequest
+          ResponseHeadersPolicyId:
+            Ref: SecurityHeaders
+          Compress: true
+        - PathPattern: /api/*
+          TargetOriginId: edge
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          CachePolicyId:
+            Ref: NoCache
+          OriginRequestPolicyId:
+            Ref: ViewerRequest
+          ResponseHeadersPolicyId:
+            Ref: SecurityHeaders
+          Compress: true
+  AllowCloudFrontUrl:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: FrontendFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: cloudfront.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}
+      FunctionUrlAuthType: AWS_IAM
+  AllowCloudFrontInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: FrontendFunction
+      Action: lambda:InvokeFunction
+      Principal: cloudfront.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}
+  Dns:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId:
+        Ref: HostedZoneId
+      RecordSets:
+      - Name:
+          Ref: DomainName
+        Type: A
+        AliasTarget:
+          DNSName:
+            Fn::GetAtt:
+            - Distribution
+            - DomainName
+          HostedZoneId: Z2FDTNDATAQYW2
+      - Name:
+          Ref: DomainName
+        Type: AAAA
+        AliasTarget:
+          DNSName:
+            Fn::GetAtt:
+            - Distribution
+            - DomainName
+          HostedZoneId: Z2FDTNDATAQYW2
+  EdgeLogs:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}/health'
+      LogGroupName:
+        Fn::Sub: /hitoclaro/${Environment}/edge
       RetentionInDays: 14
-
+  FrontendLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /hitoclaro/${Environment}/frontend
+      RetentionInDays: 14
 Outputs:
+  PublicUrl:
+    Value:
+      Fn::Sub: https://${DomainName}
   HealthUrl:
-    Description: Public health endpoint.
-    Value: !Sub 'https://${ProductApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/api/v1/health'
+    Value:
+      Fn::Sub: https://${DomainName}/api/v1/health
+  DistributionId:
+    Value:
+      Ref: Distribution
+  FrontendFunctionName:
+    Value:
+      Ref: FrontendFunction

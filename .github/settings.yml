@@ -1,9 +1,9 @@
 ---
 repository:
   name: logs-of-change
-  description: ChangeLogs API
-  homepage: github.com/LynxPardelle/logs-of-change
-  topics: nodejs, changelog, typescript, API, nestjs
+  description: Logs of Change - revisión de entregas y aprobaciones con evidencia
+  homepage: https://dev.hitoclaro.lynxpardelle.com
+  topics: angular, serverless, aws-lambda, approvals, software-delivery
   has_wiki: false
   private: false
   has_issues: false
