@@ -58,6 +58,8 @@ En local puede usarse un virtualenv bajo `serverless/.venv/`, ignorado en Git. E
 
 Dirección técnica conservada: https://dev.hitoclaro.lynxpardelle.com
 
+Esta entrega publica el código y su CI en la rama, sin desplegar una revisión nueva en AWS ni promover ramas. El entorno existente procede de la verificación histórica con la marca provisional HitoClaro. La vuelta a Logs of Change está en este código; antes de ejecutar el smoke de esta revisión contra AWS, publicar frontend y APIs de esta misma revisión en el entorno que corresponda. Un CI verde valida los artefactos, no acredita que ese commit ya esté desplegado.
+
 Región us-east-1. Stacks físicos: `hitoclaro-development-identity`, `-releases`, `-evidence`, `-edge` y `-artifacts`. No sustituir el prefijo mediante un reemplazo de marca.
 
 Con AWS CLI ya autenticado, el siguiente comando sólo lee CloudFormation y recupera parámetros públicos; no crea ni actualiza recursos:
@@ -74,6 +76,8 @@ La segunda variante escribe únicamente `serverless/.deployment/development/outp
 ## Comprobaciones desplegadas y publicación
 
 El smoke usa identidades y datos sintéticos propios, con mensajes de creación suprimidos, y los limpia al terminar. Es una prueba que escribe exclusivamente en el ámbito sintético; no equivale a la aceptación de un piloto real. Requiere un Chrome/Edge instalado; en Linux se puede indicar `LOGS_OF_CHANGE_BROWSER_PATH`.
+
+Los comandos siguientes presuponen que ese entorno ya ejecuta la misma revisión de frontend y servicios; no ejecutarlos como si el despliegue anterior hubiese cambiado de marca al hacer push.
 
 ```sh
 node serverless/scripts/smoke.mjs --environment=development
