@@ -1,5 +1,9 @@
 # Operación de Logs of Change
 
+## Estado publicado
+
+Development está publicado en https://dev.logsofchange.lynxpardelle.com y testing en https://test.logsofchange.lynxpardelle.com. Ambos tienen stacks, identidades, datos y certificados propios en us-east-1. La promoción development → testing se hizo por PR con merge commit; main permanece sin cambios y producción sigue pendiente. Los resultados constan en los informes de [desarrollo](development-logsofchange.md) y [testing](testing-logsofchange.md).
+
 ## Publicar un cambio verificable
 
 Usar Node.js24 y los lockfiles independientes de serverless y web. Ejecutar tests de ambos, build Angular y empaquetadores. Validar `serverless/template.yaml` y `serverless/services/{identity,releases,evidence}/template.yaml` con cfn-lint en us-east-1. Los artefactos generados, dependencias y outputs locales se excluyen de Git.
@@ -21,7 +25,22 @@ Para actualizar sólo entregas: `node serverless/scripts/deploy.mjs --environmen
 
 ## Promoción y retorno
 
-El orden es development → testing → main. La rama de arquitectura prepara cambios, no modifica esas ramas automáticamente. Testing exige checkout testing y despliegue con `--environment=testing`; producción exige main y `--approve-production=true` tras revisión explícita. Los dominios y datos son independientes. No apuntar producción a los usuarios ni a los datos de desarrollo.
+El orden es development → testing → main mediante pull request y merge commit. Las correcciones detectadas en testing se implementan en development y vuelven a promoverse. Confirmar árbol limpio, HEAD remoto y CI correcta antes de empaquetar/desplegar. La rama de arquitectura prepara cambios, no modifica esas ramas automáticamente. Testing exige checkout testing y despliegue con `--environment=testing`; producción exige main y `--approve-production=true` tras revisión explícita. El script comprueba la rama antes de mutar AWS. Los dominios y datos son independientes. No apuntar producción a los usuarios ni a los datos de desarrollo.
+
+Después de integrar el PR de promoción, obtener testing con avance rápido, ejecutar build, empaquetado y validaciones del commit promovido, y publicar:
+
+```sh
+git fetch origin
+git switch testing
+git pull --ff-only
+git status --short --branch
+node serverless/scripts/deploy.mjs --environment=testing
+node serverless/scripts/environment-status.mjs --environment=testing --write-outputs
+node serverless/scripts/qa-web.mjs https://test.logsofchange.lynxpardelle.com
+node serverless/scripts/smoke.mjs --environment=testing
+```
+
+Conservar el trabajo local antes de cambiar de rama. `environment-status.mjs` sólo lee los stacks y escribe outputs públicos locales si se pide `--write-outputs`. Un resultado verde anterior no sustituye la CI del HEAD que se va a promover.
 
 Si una publicación de código falla, CloudFormation revierte su actualización. Para volver a una versión anterior que ya terminó de publicarse, recuperar el template empaquetado y los objetos S3 de esa publicación y desplegar su changeset para el mismo stack; conservar sus parámetros y revisar que no reemplace tablas/pool. Los artefactos anteriores quedan versionados en S3. No revertir datos para resolver un fallo de UI.
 
@@ -47,7 +66,9 @@ La herramienta de migración sólo lee un JSON explícito. Primero validate-only
 
 ## Smoke sintético
 
-`node serverless/scripts/smoke.mjs` usa los outputs del entorno development y genera identidades/datos únicos de prueba. Las credenciales viven en memoria y los usuarios se crean con mensajes suprimidos. Prueba OAuth real y el flujo a través de CloudFront, y limpia sólo los datos y usuarios del ámbito sintético. El reporte local excluye tokens y contraseñas. Leer su salida y el [informe fechado](verification-2026-11-19.md) para saber qué se ejecutó.
+`node serverless/scripts/smoke.mjs --environment=development` y `--environment=testing` usan exclusivamente los outputs del entorno indicado y validan su dominio y prefijos de tablas antes de escribir. Generan identidades/datos únicos de prueba. Las credenciales viven en memoria y los usuarios se crean con mensajes suprimidos. Prueban OAuth real y el flujo a través de CloudFront: creación y presentación, solicitud de cambios, nueva revisión, aceptación y descarga de actas, conservando la evidencia anterior. Limpian sólo los datos y usuarios del ámbito sintético. El reporte local excluye tokens y contraseñas y no representa aceptación de un piloto real.
+
+`qa-web.mjs` admite las URLs canónicas de development/testing, comprueba escritorio y móvil, salud/configuración y redirección Code+PKCE, y guarda reportes/capturas separados en `.deployment/<entorno>/browser-qa`. Requiere Chrome/Edge instalado o `LOGSOFCHANGE_BROWSER_PATH`; `LOGSOFCHANGE_BROWSER_CHANNEL` permite seleccionar un canal instalado. Las salidas del smoke también quedan bajo `.deployment/<entorno>/`. La recuperación sintética con `--restore=true` está restringida a development; testing la rechaza. Consultar los informes de [desarrollo](development-logsofchange.md) y [testing](testing-logsofchange.md) para el alcance de lo ejecutado.
 
 Si npm en Windows informa UNABLE_TO_VERIFY_LEAF_SIGNATURE por la cadena local de certificados, ejecutar en ese proceso con `NODE_OPTIONS=--use-system-ca` y mantener la verificación TLS activada. No cambiar strict-ssl.
 
