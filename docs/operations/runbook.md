@@ -50,3 +50,9 @@ La herramienta de migración sólo lee un JSON explícito. Primero validate-only
 `node serverless/scripts/smoke.mjs` usa los outputs del entorno development y genera identidades/datos únicos de prueba. Las credenciales viven en memoria y los usuarios se crean con mensajes suprimidos. Prueba OAuth real y el flujo a través de CloudFront, y limpia sólo los datos y usuarios del ámbito sintético. El reporte local excluye tokens y contraseñas. Leer su salida y el [informe fechado](verification-2026-11-19.md) para saber qué se ejecutó.
 
 Si npm en Windows informa UNABLE_TO_VERIFY_LEAF_SIGNATURE por la cadena local de certificados, ejecutar en ese proceso con `NODE_OPTIONS=--use-system-ca` y mantener la verificación TLS activada. No cambiar strict-ssl.
+
+## Retiro de un entorno de desarrollo vacío sustituido
+
+La herramienta `serverless/scripts/retire-empty-environment.mjs` recibe dos inventarios JSON explícitos dentro de la ruta ignorada `.deployment/migration-logsofchange/`: origen y reemplazo. Por defecto sólo presenta un plan de lectura. Rechaza testing/production, cuenta o región distintas, nombres/ARN ajenos, un reemplazo incompleto o cualquier usuario, fila o versión de evidencia en el origen.
+
+Sólo después de verificar sitio y flujo del reemplazo, `--apply` permite retirar los stacks exactos anteriores y sus recursos retenidos todavía vacíos. Repite la comprobación de datos, desactiva la protección únicamente de una tabla antigua identificada y vacía, purga versiones de artefactos sólo en su bucket exclusivo y elimina únicamente los logs y el CNAME de validación inventariados. Un fallo detiene el proceso y conserva un reporte de progreso sin credenciales. El historial Git conserva las verificaciones anteriores; el entorno activo usa el nombre definitivo logsofchange.
