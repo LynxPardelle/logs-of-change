@@ -71,6 +71,10 @@ Antes de un corte: elegir proyecto y organización verificados, exportar en sól
 
 ## Entornos y operación
 
-Los nombres físicos AWS, dominios, paquetes y contratos nuevos usan logsofchange; la marca es Logs of Change. Región: us-east-1. Desarrollo: `dev.logsofchange.lynxpardelle.com`; pruebas: `test.logsofchange.lynxpardelle.com`; producción: `logsofchange.lynxpardelle.com`. Certificados específicos cubren cada hostname y los registros son propios. Los stacks aíslan tablas, usuarios, buckets, API y logs por entorno. Promoción: development → testing → main. El código se integra y publica en development; testing y main no se modifican. Producción requiere aprobación explícita.
+Los nombres físicos AWS, dominios, paquetes y contratos nuevos usan logsofchange; la marca es Logs of Change. Región: us-east-1. Desarrollo: `dev.logsofchange.lynxpardelle.com`; pruebas: `test.logsofchange.lynxpardelle.com`; producción prevista: `logsofchange.lynxpardelle.com`. Certificados específicos cubren los hostnames publicados y los registros son propios. Los cinco stacks de cada entorno aíslan tablas, usuarios, buckets, API y logs.
 
-[Plan](../../plan/architecture-serverless-product-1.md) · [Contrato v1](contracts/releases-v1.md) · [Runbook](../operations/runbook.md) · [Verificación](../operations/verification-2026-11-19.md).
+Development y testing están publicados y verificados: Angular SSR, DNS/TLS, OAuth Code+PKCE, QA de escritorio/móvil y flujo completo de solicitud de cambios, nueva revisión, aceptación y actas íntegras. La promoción a testing se realizó por pull request con merge commit y CI correcta. Los datos/usuarios sintéticos se limpiaron al terminar; esto no acredita la aceptación de un piloto real ni las cargas de adjuntos todavía pendientes.
+
+La cadena sigue development → testing → main. El trabajo nuevo y las correcciones se integran primero en development; testing recibe promociones por PR. `deploy.mjs` exige la rama del entorno antes de mutar AWS; producción exige main y `--approve-production=true` tras revisión explícita. Main permanece sin cambios y producción no se ha desplegado en esta entrega.
+
+[Plan](../../plan/architecture-serverless-product-1.md) · [Contrato v1](contracts/releases-v1.md) · [Runbook](../operations/runbook.md) · [Desarrollo verificado](../operations/development-logsofchange.md) · [Testing verificado](../operations/testing-logsofchange.md).
