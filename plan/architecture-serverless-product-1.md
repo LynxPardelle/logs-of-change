@@ -54,14 +54,14 @@ El producto conserva su nombre original **Logs of Change**, identificador `logso
 | TASK-010 | Marca Logs of Change en paquetes/UI/salud/documentos y dominio por entorno | Implementada la vuelta a Logs of Change; nombres físicos AWS unificados a logsofchange, con guiños originales a cambios y rumbo |
 | TASK-011 | Angular SSR Lambda, CloudFront OAC, certificado y DNS; configuración pública y PKCE | Implementada y desplegada en development; SSR, DNS/TLS, login/callback y QA escritorio/móvil comprobados |
 | TASK-012 | Artefactos reproducibles, despliegue independiente y validación CI | Scripts y workflow implementados; CI valida el HEAD publicado de la rama. Ver REMOTE_HANDOFF.md para reproducir y recuperar outputs sin redesplegar |
-| TASK-013 | Smoke con identidades sintéticas, TLS/DNS, flujo de revisión y evidencia íntegra | Completada en development:12 comprobaciones finales y recuperación real de datos sintéticos en tabla nueva; [evidencia](../docs/operations/verification-2026-11-19.md). No representa aceptación del piloto real |
+| TASK-013 | Smoke con identidades sintéticas, TLS/DNS, flujo de revisión y evidencia íntegra | Completada en development:12 comprobaciones desplegadas, incluyendo aprobación completa por UI y retiro del entorno anterior vacío; [evidencia vigente](../docs/operations/development-logsofchange.md). No representa aceptación del piloto real |
 | TASK-014 | Promover a testing y después main, con observabilidad y revisión del piloto | **Pendiente**; no se eleva desde la rama de arquitectura automáticamente |
 
 ## Primer flujo pendiente tras la base implementada
 
 Seleccionar un proyecto piloto y su organización, obtener una exportación autorizada, validar la proyección y conciliar contra el origen real (TASK-005), seguido del selector reversible (TASK-006). Los siguientes incrementos de código independientes son cargas privadas con versiones verificadas (TASK-008) y gestión administrativa de invitaciones sin habilitar acceso público.
 
-No se considera completado un criterio por existir su plantilla o por pasar un fixture sintético. Los resultados ejecutados y los recursos efectivamente desplegados viven en el [informe de verificación](../docs/operations/verification-2026-11-19.md).
+No se considera completado un criterio por existir su plantilla o por pasar un fixture sintético. Los resultados ejecutados y los recursos efectivamente desplegados viven en el [informe de desarrollo](../docs/operations/development-logsofchange.md).
 
 ## Validación
 

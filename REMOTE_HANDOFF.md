@@ -5,7 +5,7 @@
 - Repositorio: https://github.com/LynxPardelle/logs-of-change
 - Rama de continuación: `development`.
 - Producto: **Logs of Change**. El identificador técnico de todos los componentes activos es logsofchange.
-- Integración: primero revisar contra **development**, después promover a **testing** y finalmente a **main**. No integrar esta rama de arquitectura directamente a main.
+- Estado: plataforma integrada en **development** y desplegada en su entorno. Las elevaciones posteriores se hacen por pull request **development → testing → main**; testing y main permanecen sin cambios en esta entrega.
 - CI: workflow `Logs of Change validation`, archivo `.github/workflows/logsofchange-validation.yml`. Comprobar la ejecución asociada al HEAD remoto; no basta con una ejecución verde de un commit anterior.
 
 El árbol incluye Angular SSR, microservicios SAM de identidad/entregas/evidencia, migración offline, pruebas y herramientas operativas. El backend NestJS de `src/` conserva su contrato e incompatibilidades documentadas; no necesita instalarse para trabajar en el producto serverless.
