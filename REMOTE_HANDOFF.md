@@ -73,7 +73,7 @@ La segunda variante escribe únicamente `serverless/.deployment/development/outp
 
 ## Comprobaciones desplegadas y publicación
 
-El smoke usa identidades y datos sintéticos propios, con mensajes de creación suprimidos, y los limpia al terminar. Es una prueba que escribe exclusivamente en el ámbito sintético; no equivale a la aceptación de un piloto real. Requiere un Chrome/Edge instalado; en Linux se puede indicar `LOGS_OF_CHANGE_BROWSER_PATH`.
+El smoke usa identidades y datos sintéticos propios, con mensajes de creación suprimidos, y los limpia al terminar. Es una prueba que escribe exclusivamente en el ámbito sintético; no equivale a la aceptación de un piloto real. Requiere un Chrome/Edge instalado; en Linux se puede indicar `LOGSOFCHANGE_BROWSER_PATH`.
 
 Los comandos siguientes deben ejecutarse contra una revisión coherente de frontend y servicios; comprobar el informe de publicación y el estado de los stacks.
 

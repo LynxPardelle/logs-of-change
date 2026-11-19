@@ -4,19 +4,17 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { resolveQaTarget } from './qa-web-target.mjs';
 
 const serviceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const base = new URL(process.argv[2] || 'https://dev.logsofchange.lynxpardelle.com');
-assert.equal(base.protocol, 'https:', 'Browser QA expects the HTTPS deployment URL.');
-assert.equal(base.hostname, 'dev.logsofchange.lynxpardelle.com', 'Browser QA is restricted to the development deployment.');
-assert.ok(!base.username && !base.password && !base.port && !base.search && !base.hash && base.pathname === '/', 'Browser QA expects only the development origin.');
-const output = join(serviceRoot, '.deployment', 'development', 'browser-qa');
+const { base, environment } = resolveQaTarget(process.argv[2]);
+const output = join(serviceRoot, '.deployment', environment, 'browser-qa');
 await mkdir(output, { recursive: true });
 const safeUrl = value => { try { const url = new URL(value); return `${url.origin}${url.pathname}`; } catch { return value; } };
 const executablePath = process.env.LOGSOFCHANGE_BROWSER_PATH;
 const channel = process.env.LOGSOFCHANGE_BROWSER_CHANNEL || (existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe') ? 'chrome' : existsSync('C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe') ? 'msedge' : undefined);
 const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : channel ? { channel } : {}) });
-const report = { origin: base.origin, checkedAt: new Date().toISOString(), pages: [], checks: {} };
+const report = { origin: base.origin, environment, checkedAt: new Date().toISOString(), pages: [], checks: {} };
 
 try {
   for (const [name, viewport] of [['desktop', { width: 1280, height: 900 }], ['mobile', { width: 390, height: 844 }]]) {
@@ -51,7 +49,7 @@ try {
     assert.equal(configResponse.status(), 200, 'Runtime configuration HTTP status');
     const config = await configResponse.json();
     assert.equal(config.product, 'Logs of Change');
-    assert.equal(config.environment, 'development');
+    assert.equal(config.environment, environment);
     assert.equal(new URL(config.auth.redirectUri).origin, base.origin);
     report.checks.health = 200; report.checks.runtimeConfig = 200;
     if (name === 'desktop') {
