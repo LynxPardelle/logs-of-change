@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "legacy-export-v1",
+  "source": { "system": "synthetic-legacy", "exportId": "synthetic-pilot-2026-11-19" },
+  "mapping": { "orgId": "synthetic-agency", "projectId": "synthetic-project", "legacyProjectId": "project-1" },
+  "collections": {
+    "projects": [{ "_id": "project-1", "name": "Proyecto sintético", "description": "Fixture sin datos reales", "changeLog": "changelog-1", "apiKeys": ["synthetic-secret-must-not-export"], "members": ["synthetic-person-must-not-export"], "createdAt": "2026-11-17T12:00:00Z" }],
+    "changeLogs": [{ "_id": "changelog-1", "logs": ["log-1"], "logSectionTypes": ["sectiontype-1"], "logCombosDefault": ["combo-1"], "apiKeys": ["synthetic-secret-must-not-export"] }],
+    "logs": [{ "_id": "log-1", "date": "2026-11-18T12:00:00Z", "logSections": ["section-1"], "combos": [] }],
+    "logSections": [{ "_id": "section-1", "type": "sectiontype-1", "priority": 1, "titles": ["text-title"], "texts": ["text-body"], "media": ["media-1"], "combos": [] }],
+    "logTexts": [{ "_id": "text-title", "text": "Entrega histórica sintética", "position": 1, "combos": [] }, { "_id": "text-body", "text": "Se añadió una pantalla de ejemplo.", "position": 2, "combos": ["combo-1"] }],
+    "logMedia": [{ "_id": "media-1", "file": "file-1", "position": 1, "combos": [] }],
+    "logSectionTypes": [{ "_id": "sectiontype-1", "name": "Mejoras", "priorityDefault": 1, "mediaPositionDefault": 1, "textPositionDefault": 1, "logSectionCombosDefault": [], "logTextCombosDefault": [], "logMediaCombosDefault": [] }],
+    "files": [{ "_id": "file-1", "name": "ejemplo.svg", "type": "image/svg+xml", "location": "https://example.invalid/legacy/ejemplo.svg?token=synthetic-url-secret#fragment", "size": 123 }],
+    "combos": [{ "_id": "combo-1", "name": "Destacado", "cssClasses": ["highlight"] }]
+  }
+}

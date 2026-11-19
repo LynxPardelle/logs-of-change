@@ -1,0 +1,96 @@
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Logs of Change, inicio"><span class="brand-mark" aria-hidden="true">LC</span><span>Logs of Change<span class="brand-dot">.</span></span></a>
+    <span class="product-tag">ENTREGAS CON EVIDENCIA</span>
+    <div class="topbar-actions">
+      <span class="connection" role="status"><i [class.connected]="health.status() === 'connected'" aria-hidden="true"></i>{{ health.status() === 'connected' ? 'API disponible' : health.status() === 'checking' ? 'Conectando…' : 'Sin conexión con la API' }}</span>
+      @if (session.authenticated()) { <button class="text-button" (click)="logout()">Cerrar sesión</button> }
+      @else { <button class="button compact" (click)="session.login()" [disabled]="!session.ready() || !session.config()">Iniciar sesión <span aria-hidden="true">↗</span></button> }
+    </div>
+  </header>
+
+  @if (!session.authenticated()) {
+    <main class="landing">
+      <section class="hero">
+        <p class="eyebrow"><span aria-hidden="true">●</span> CADA CAMBIO, UN RUMBO CLARO</p>
+        <h1>Entrega tu trabajo.<br><span>Cierra el hito.</span></h1>
+        <p class="hero-description">Reúne los cambios, presenta una versión y recibe la decisión de tu cliente. Todo queda conectado a la entrega que revisaron.</p>
+        <button class="button" (click)="session.login()" [disabled]="!session.ready() || !session.config()">Entrar a mi espacio <span aria-hidden="true">→</span></button>
+        <p class="hero-note">Para agencias y equipos que entregan software por hitos.</p>
+        @if (session.error()) { <p class="error" role="alert">{{ session.error() }}</p><button class="text-button" (click)="session.initialize()">Reintentar conexión</button> }
+      </section>
+      <section class="workflow" aria-label="Cómo funciona Logs of Change">
+        <div class="workflow-heading"><span>UN FLUJO, DE PRINCIPIO A FIN</span><span aria-hidden="true">↙</span></div>
+        <ol>
+          <li><span class="step-number">01</span><div><h2>Presenta la entrega</h2><p>El alcance y los cambios de una versión, en un solo lugar.</p></div><span class="step-symbol" aria-hidden="true">↗</span></li>
+          <li><span class="step-number">02</span><div><h2>Recibe una decisión</h2><p>Aceptar o pedir cambios. El revisor decide sobre esa revisión.</p></div><span class="step-symbol" aria-hidden="true">✓</span></li>
+          <li><span class="step-number">03</span><div><h2>Conserva la evidencia</h2><p>Consulta el historial y descarga el acta de la versión decidida.</p></div><span class="step-symbol" aria-hidden="true">↓</span></li>
+        </ol>
+        <p class="workflow-footer">Que cada cambio encuentre su rumbo.</p>
+      </section>
+    </main>
+  } @else {
+    <main class="workspace">
+      <aside class="sidebar" aria-label="Proyectos">
+        <p class="eyebrow">TU ESPACIO</p>
+        <h1>Entregas</h1>
+        <label for="project">Proyecto</label>
+        <select id="project" [value]="store.orgId() + '/' + store.projectId()" (change)="selectProject($any($event.target).value)" [disabled]="store.busy()">
+          @for (membership of session.identity()?.memberships ?? []; track membership.orgId) {
+            <optgroup [label]="membership.orgName">
+              @for (project of membership.projects; track project.projectId) { <option [value]="membership.orgId + '/' + project.projectId">{{ project.name }}</option> }
+            </optgroup>
+          }
+        </select>
+        @if (store.projectId()) {
+          <div class="sidebar-meta"><span>{{ role() === 'reviewer' ? 'Revisor' : role() === 'editor' ? 'Editor' : 'Administrador' }}</span><button class="text-button" (click)="store.load()" [disabled]="store.loading() || store.busy()">Actualizar</button></div>
+          @if (canEdit()) { <button class="button full" (click)="newDraft()" [disabled]="store.busy()">＋ Nueva entrega</button> }
+        }
+        <nav class="release-list" aria-label="Entregas del proyecto">
+          @for (release of store.releases(); track release.id) {
+            <button class="release-item" [class.selected]="store.detail()?.release?.id === release.id" (click)="selectRelease(release.id)" [disabled]="store.busy()"><span class="release-item-title">{{ release.title }}</span><span class="release-item-meta"><span [class]="'status-dot ' + release.status"></span>{{ labels[release.status] }}<span>r{{ release.revision }}</span></span></button>
+          } @empty {
+            @if (!store.loading()) { <p class="muted empty-list">Este proyecto aún no tiene entregas.</p> }
+          }
+        </nav>
+        @if (store.nextCursor()) { <button class="text-button" (click)="store.load(true)" [disabled]="store.loading()">Cargar más entregas</button> }
+      </aside>
+
+      <section class="content" aria-label="Detalle de la entrega" [attr.aria-busy]="store.loading() || store.busy()">
+        <div class="content-topline"><span>{{ currentProject() }}</span><span>{{ session.config()?.environment === 'production' ? 'Espacio de trabajo' : 'Entorno de ' + (session.config()?.environment === 'testing' ? 'pruebas' : 'desarrollo') }}</span></div>
+        @if (store.error()) { <div class="error" role="alert">{{ store.error() }}</div> }
+        @if (store.notice()) { <div class="notice" role="status">{{ store.notice() }}</div> }
+        @if (store.loading()) { <p class="loading" role="status">Cargando entrega…</p> }
+        @if (editing()) {
+          <div class="section-heading"><p class="eyebrow">{{ revising() ? 'OTRA VERSIÓN, EL MISMO HISTORIAL' : 'PREPARA EL SIGUIENTE HITO' }}</p><h2>{{ revising() ? 'Nueva revisión' : 'Nueva entrega' }}</h2><p class="muted">Guarda un borrador. Después podrás presentarlo al revisor.</p></div>
+          <form class="draft-form" (submit)="save($event)">
+            @if (formError()) { <p class="error" role="alert">{{ formError() }}</p> }
+            <label for="title">Nombre de la entrega<input id="title" name="title" required maxlength="160" [value]="title()" (input)="title.set($any($event.target).value)" placeholder="Ej. Portal del cliente · primera entrega" /></label>
+            <label for="summary">Alcance<textarea id="summary" name="summary" required maxlength="5000" rows="4" [value]="summary()" (input)="summary.set($any($event.target).value)" placeholder="Qué incluye esta entrega y qué debe revisar el cliente."></textarea></label>
+            <label for="changes">Cambios incluidos<textarea id="changes" name="changes" required maxlength="16000" rows="6" [value]="changes()" (input)="changes.set($any($event.target).value)" placeholder="Un cambio por línea"></textarea><span class="field-note">Escribe un cambio por línea.</span></label>
+            <div class="form-actions"><button class="button" type="submit" [disabled]="store.busy()">{{ store.busy() ? 'Guardando…' : 'Guardar borrador' }}</button><button class="text-button" type="button" (click)="editing.set(false)" [disabled]="store.busy()">Cancelar</button></div>
+          </form>
+        } @else if (store.detail(); as detail) {
+          <div class="section-heading"><p class="eyebrow">ENTREGA · REVISIÓN {{ detail.release.revision }}</p><h2>{{ detail.release.title }}</h2><div class="detail-meta"><span [class]="'badge ' + detail.release.status">{{ labels[detail.release.status] }}</span><span class="muted">Actualizada {{ detail.release.updatedAt | date:'dd MMM yyyy, HH:mm' }}</span></div></div>
+          <div class="release-body"><h3>Alcance</h3><p class="preserve-lines">{{ detail.release.summary }}</p><h3>Cambios incluidos</h3><ul class="changes-list">@for (change of detail.release.changes; track $index) { <li>{{ change }}</li> }</ul></div>
+          @if (revision(detail.release.revision); as registered) { <details class="revision-proof"><summary>Identidad de la revisión presentada</summary><p>Revisión {{ registered.number }} · {{ registered.submittedAt | date:'dd MMM yyyy, HH:mm' }}</p><p class="field-note">SHA-256</p><code>{{ registered.digest }}</code></details> }
+          @if (detail.release.status === 'draft' && canEdit()) {
+            <div class="action-panel"><div><h3>¿Está lista para revisión?</h3><p>Al presentarla se registra el contenido de esta versión.</p></div><button class="button" (click)="store.submit()" [disabled]="store.busy()">Presentar entrega →</button></div>
+          }
+          @if (detail.release.status === 'pending_review') {
+            @if (canReview()) {
+              <section class="review-panel"><h3>Tu decisión sobre la revisión {{ detail.release.revision }}</h3><p class="muted">Revisa el alcance y los cambios antes de registrar tu decisión.</p><label for="reason">Comentarios<textarea id="reason" rows="3" maxlength="2000" [value]="reason()" (input)="reason.set($any($event.target).value)" placeholder="Indica qué debe cambiar. También puedes dejar una nota al aceptar."></textarea></label><div class="form-actions"><button class="button" (click)="decision('accepted')" [disabled]="store.busy()">Aceptar entrega ✓</button><button class="button secondary" (click)="decision('changes_requested')" [disabled]="store.busy() || !reason().trim()">Pedir cambios</button></div><p class="field-note">Para pedir cambios es necesario escribir un motivo.</p></section>
+            } @else { <div class="notice" role="status">Esperando la decisión de un revisor autorizado. La persona que creó la entrega no puede aprobarla.</div> }
+          }
+          @if (detail.release.status === 'changes_requested' && canEdit()) { <div class="action-panel"><div><h3>Prepara la siguiente revisión</h3><p>La revisión anterior y su decisión se conservarán.</p></div><button class="button" (click)="newRevision()" [disabled]="store.busy()">Crear nueva revisión →</button></div> }
+          @if (detail.decisions.length) {
+            <section class="history"><p class="eyebrow">UN HISTORIAL QUE SE CONSERVA</p><h3>Decisiones registradas</h3>@for (decision of detail.decisions; track $index) { <article><div><strong>Revisión {{ decision.revision }} · {{ decision.outcome === 'accepted' ? 'Aceptada' : 'Cambios solicitados' }}</strong>@if (decision.reason) { <p class="preserve-lines">{{ decision.reason }}</p> }@if (revision(decision.revision); as historical) { <details class="revision-proof"><summary>Ver contenido de esta revisión</summary><p><strong>{{ historical.manifest.title }}</strong></p><p class="preserve-lines">{{ historical.manifest.summary }}</p><ul>@for (change of historical.manifest.changes ?? []; track $index) { <li>{{ change }}</li> }</ul><p class="field-note">SHA-256</p><code>{{ historical.digest }}</code></details> }</div><button class="text-button" (click)="store.downloadActa(decision.revision)">Descargar acta ↓</button></article> }<p class="field-note">El acta contiene la revisión, la decisión y los datos para comprobar su integridad.</p></section>
+          }
+        } @else if (!store.loading()) {
+          <div class="workspace-empty"><span aria-hidden="true">↗</span><h2>{{ store.projectId() ? 'Cada hito empieza aquí.' : 'Tu próximo proyecto, en un solo lugar.' }}</h2><p>{{ store.projectId() ? 'Selecciona una entrega para ver su contenido, revisión e historial.' : 'Tu cuenta aún no tiene proyectos asignados. Pide acceso a la persona administradora de tu organización.' }}</p>@if (canEdit()) { <button class="button" (click)="newDraft()">Preparar una entrega →</button> }</div>
+        }
+      </section>
+    </main>
+  }
+  <footer class="footer"><span>Logs of Change · Un producto de Lynx Pardelle</span><span>Entregas claras. Decisiones registradas.</span></footer>
+</div>

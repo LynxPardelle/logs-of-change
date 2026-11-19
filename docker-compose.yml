@@ -1,8 +1,8 @@
 version: '3.8'
 
 services:
-  logs-of-change-production:
-    container_name: logs-of-change-production
+  logsofchange-production:
+    container_name: logsofchange-production
     build:
       target: production
       context: .
@@ -19,8 +19,8 @@ services:
           cpus: '0.25'
           memory: '256m'
 
-  logs-of-change-dev:
-    container_name: logs-of-change-dev
+  logsofchange-dev:
+    container_name: logsofchange-dev
     restart: unless-stopped
     env_file: .env
     build:

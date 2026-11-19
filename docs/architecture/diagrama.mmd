@@ -1,0 +1,14 @@
+flowchart LR
+  U[Agencia y cliente] --> CF[CloudFront + ACM + Route 53]
+  CF -->|HTML y assets| SSR[Angular SSR Lambda / URL IAM + OAC]
+  CF -->|salud y config| EDGE[Edge HTTP API + Lambdas]
+  CF -->|identity| ID[Identity HTTP API + Lambda]
+  CF -->|orgs| REL[Releases HTTP API + Lambda]
+  CF -->|evidence| EV[Evidence HTTP API + Lambda]
+  U -->|Code + PKCE| COG[Cognito]
+  ID --> ACL[AccessTable]
+  REL -->|validación y ConditionCheck| ACL
+  REL --> DB[ReleasesTable / transacciones]
+  EV -->|JWT original / reautorizar| REL
+  LEG[NestJS / origen heredado] -.->|export explícito sólo lectura| MIG[Normalizador offline]
+  MIG -.->|pendiente piloto real| DB
