@@ -9,7 +9,7 @@ const snapshot = { environment: 'development', region: 'us-east-1', identity: { 
 const args = ['--environment=development', '--org=agency', '--project=pilot', '--plan=plus'];
 const item = row => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, typeof value === 'string' ? { S: value } : typeof value === 'boolean' ? { BOOL: value } : { N: String(value) }]));
 
-function setup({ existing, project = { active: true, projectId: 'pilot' }, branch = 'development', identityAccount = account, environment = snapshot } = {}) {
+function setup({ existing, project = { active: true, projectId: 'pilot' }, branch = 'development', identityAccount = account, environment = snapshot, productOutput, projectOutput } = {}) {
   const calls = [];
   return { calls, dependencies: { now: () => epoch * 1000,
     readEnvironment: async selected => { calls.push({ readEnvironment: selected }); return environment; },
@@ -19,6 +19,8 @@ function setup({ existing, project = { active: true, projectId: 'pilot' }, branc
       if (parameters[0] === 'sts') return JSON.stringify({ Account: identityAccount });
       if (parameters[0] === 'dynamodb' && parameters[1] === 'get-item') {
         const key = JSON.parse(parameters[parameters.indexOf('--key') + 1]);
+        const output = key.SK.S === 'PRODUCT' ? productOutput : projectOutput;
+        if (output !== undefined) return output;
         return JSON.stringify({ ...(key.SK.S === 'PRODUCT' ? existing ? { Item: item(existing) } : {} : project ? { Item: item(project) } : {}) });
       }
       if (parameters[0] === 'dynamodb' && parameters[1] === 'transact-write-items') return '{}';
@@ -40,6 +42,37 @@ test('default preview freshly verifies account, table, project and existing plan
   assert.equal(calls.filter(call => call.command === 'aws').length, 3);
   assert.ok(calls.filter(call => call.parameters?.[1] === 'get-item').every(call => call.parameters.includes('--consistent-read')));
   assert.equal(calls.some(call => call.parameters?.[1] === 'transact-write-items'), false);
+});
+
+test('a successful get-item with empty PRODUCT stdout permits preview and a conditional first plan write', async () => {
+  for (const productOutput of ['', ' \r\n ']) {
+    for (const apply of [false, true]) {
+      const { calls, dependencies } = setup({ productOutput });
+      const result = await setProductPlan(parsePlanArguments([...args, ...(apply ? ['--apply=true'] : [])]), dependencies);
+      assert.equal(result.previous, null);
+      assert.equal(result.applied, apply);
+      const writeCall = calls.find(call => call.parameters?.[1] === 'transact-write-items');
+      if (!apply) assert.equal(writeCall, undefined);
+      else {
+        const transaction = JSON.parse(writeCall.parameters[writeCall.parameters.indexOf('--transact-items') + 1]);
+        assert.equal(transaction[1].Put.ConditionExpression, 'attribute_not_exists(PK)');
+        assert.equal(transaction[0].ConditionCheck.Key.SK.S, 'PROJECT#pilot');
+      }
+    }
+  }
+});
+
+test('empty project stdout remains a missing-project error and malformed get-item JSON never permits a write', async () => {
+  for (const projectOutput of ['', ' \r\n ']) {
+    const { calls, dependencies } = setup({ productOutput: '', projectOutput });
+    await assert.rejects(setProductPlan(parsePlanArguments([...args, '--apply=true']), dependencies), /exact target project is missing or inactive/);
+    assert.equal(calls.some(call => call.parameters?.[1] === 'transact-write-items'), false);
+  }
+  for (const output of [{ productOutput: '{"Item":' }, { projectOutput: 'not-json' }]) {
+    const { calls, dependencies } = setup(output);
+    await assert.rejects(setProductPlan(parsePlanArguments([...args, '--apply=true']), dependencies), SyntaxError);
+    assert.equal(calls.some(call => call.parameters?.[1] === 'transact-write-items'), false);
+  }
 });
 
 test('apply writes exactly one CAS entitlement and conditions it on the active target project', async () => {

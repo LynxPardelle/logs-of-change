@@ -1,0 +1,14 @@
+{
+  "title": "ZooBeriah Systems: catálogo público de sitios web",
+  "summary": "Nueva revisión del piloto para evaluar el catálogo ya publicado; la publicación anterior se registra sólo como procedencia, sin trasladar aprobaciones históricas.",
+  "changes": [
+    "El catálogo público se consulta en https://zooberiahsystems.com/sitios-web con URL canónica propia.",
+    "La ruta anterior /landingpages redirige permanentemente a /sitios-web mediante HTTP 301.",
+    "La navegación principal muestra Servicios, Sitios web y Productos."
+  ],
+  "source": {
+    "system": "GitHub",
+    "externalId": "LynxPardelle/draft-zooberiahsystems-com#21",
+    "revision": "0143877663c9577d9b51c9d25b6d5e9acd35e4da"
+  }
+}

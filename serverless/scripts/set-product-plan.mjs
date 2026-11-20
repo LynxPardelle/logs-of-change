@@ -82,7 +82,12 @@ export async function setProductPlan(input, { runner = runCommand, readEnvironme
   const table = environment.identity?.AccessTableName;
   const tableArn = /^arn:aws:dynamodb:us-east-1:(\d{12}):table\/(.+)$/.exec(environment.identity?.AccessTableArn || '');
   if (environment.environment !== options.environment || environment.region !== region || !/^\d{12}$/.test(caller.Account || '') || !tableArn || tableArn[1] !== caller.Account || tableArn[2] !== table || !table.startsWith(`logsofchange-${options.environment}-`)) throw new Error('Product-plan target account, region or table does not match the discovered environment.');
-  const get = async SK => JSON.parse(await runner('aws', ['dynamodb', 'get-item', '--table-name', table, '--key', JSON.stringify(encodeRow({ PK: `TENANT#${options.org}`, SK })), '--consistent-read', '--region', region, '--output', 'json'])).Item;
+  const get = async SK => {
+    const output = await runner('aws', ['dynamodb', 'get-item', '--table-name', table, '--key', JSON.stringify(encodeRow({ PK: `TENANT#${options.org}`, SK })), '--consistent-read', '--region', region, '--output', 'json']);
+    // A successful AWS CLI get-item can omit stdout when the item is absent.
+    // Keep nonempty output strict so malformed JSON never becomes a missing row.
+    return output.trim() ? JSON.parse(output).Item : undefined;
+  };
   const [project, previousItem] = await Promise.all([get(`PROJECT#${options.project}`), get('PRODUCT')]);
   if (project?.active?.BOOL !== true || project.projectId?.S !== options.project) throw new Error('The exact target project is missing or inactive.');
   const previous = decodeProduct(previousItem);
