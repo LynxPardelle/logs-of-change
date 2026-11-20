@@ -4,7 +4,7 @@ Revisión de entregas y aprobaciones con evidencia. Una agencia presenta un hito
 
 El nombre conserva la referencia personal a **Wind of Change**, de Scorpions. El guiño editorial es «Que cada cambio encuentre su rumbo», con textos propios sobre cambios, versiones y nuevos caminos. El identificador técnico de paquetes, servicios y recursos es `logsofchange`.
 
-La base de aprobaciones está publicada y verificada en desarrollo, pruebas y producción, con recursos propios bajo lynxpardelle.com. El incremento de integraciones portables y consultas públicas está implementado; su disponibilidad desplegada por entorno se registra por separado en el [informe de producción y rollout](docs/operations/production-logsofchange.md). No se considera publicado por existir su código.
+Logs of Change está publicado y verificado en desarrollo, pruebas y producción, incluidas las integraciones portables y las consultas públicas, con recursos propios bajo lynxpardelle.com. El [informe de producción y rollout](docs/operations/production-logsofchange.md) registra las revisiones desplegadas y las comprobaciones reales de cada entorno.
 
 ## Arquitectura
 
@@ -14,15 +14,15 @@ Angular 22 con NgRx SignalStore y SSR en Lambda Node.js 24 ARM64, detrás de Clo
 | --- | --- | --- | --- |
 | Desarrollo | development | https://dev.logsofchange.lynxpardelle.com | Publicado y verificado |
 | Pruebas | testing | https://test.logsofchange.lynxpardelle.com | Publicado y verificado |
-| Producción | main | https://logsofchange.lynxpardelle.com | Base publicada y verificada |
+| Producción | main | https://logsofchange.lynxpardelle.com | Publicado y verificado |
 
-La base llegó a testing por el [PR #337](https://github.com/LynxPardelle/logs-of-change/pull/337) y a main por el [PR #339](https://github.com/LynxPardelle/logs-of-change/pull/339), con merge commit, CI y flujo completo de aprobación verificados. El trabajo nuevo sigue **development → testing → main**; el incremento se prepara primero en su rama de trabajo y se promueve después de las comprobaciones de cada entorno. Para continuar desde otra máquina o sesión, consultar [REMOTE_HANDOFF.md](REMOTE_HANDOFF.md).
+La base llegó a testing por el [PR #337](https://github.com/LynxPardelle/logs-of-change/pull/337) y a main por el [PR #339](https://github.com/LynxPardelle/logs-of-change/pull/339). La adición de integraciones y dashboards completó después la misma cadena y llegó a producción por el [PR #343](https://github.com/LynxPardelle/logs-of-change/pull/343), revisión de aplicación `5b30c8633bd2e1311f266206e300b1a5032acbc6`, con [CI correcta](https://github.com/LynxPardelle/logs-of-change/actions/runs/44641204991), QA de escritorio/móvil y 17 comprobaciones desplegadas correctas. El trabajo nuevo sigue **development → testing → main**, mediante pull request y merge commit, con verificación de cada entorno antes de promover. Para continuar desde otra máquina o sesión, consultar [REMOTE_HANDOFF.md](REMOTE_HANDOFF.md).
 
 ## Enviar entregas desde otro proyecto
 
 El incremento incorpora una API HTTPS y un CLI portable, sin requerir cuenta AWS al proyecto consumidor. Un administrador con Plus activo crea una clave en `/integrations`; el secreto se muestra una sola vez, vence como máximo en 90 días y puede revocarse. La clave sólo crea **borradores privados**: una persona presenta la entrega y otra decide. Las aprobaciones y publicaciones requieren acceso personal vigente.
 
-La distribución del frontend incluye `/downloads/logsofchange.mjs`. Después de publicar el incremento en el entorno elegido, descargar ese archivo y ejecutarlo con Node.js 24; no requiere dependencias ni instalación global. El proyecto consumidor entrega su secreto al proceso mediante `LOGSOFCHANGE_API_KEY`, desde su gestor de secretos:
+El frontend distribuye el [CLI de producción](https://logsofchange.lynxpardelle.com/downloads/logsofchange.mjs) en `/downloads/logsofchange.mjs`. Descargar ese archivo y ejecutarlo con Node.js 24; no requiere dependencias ni instalación global. El proyecto consumidor entrega su secreto al proceso mediante `LOGSOFCHANGE_API_KEY`, desde su gestor de secretos:
 
 ```sh
 node logsofchange.mjs --environment=production --org=mi-agencia --project=portal --file=release.json --idempotency-key=build-42
