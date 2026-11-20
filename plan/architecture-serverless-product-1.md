@@ -1,6 +1,6 @@
 ---
 goal: Logs of Change - microservicios en AWS con Angular SSR en Lambda y revisión de entregas
-version: '3.0'
+version: '3.1'
 date_created: 2026-11-17
 date_updated: 2026-11-19
 status: 'In progress'
@@ -44,8 +44,8 @@ El producto conserva su nombre original **Logs of Change**, identificador `logso
 | Tarea | Entregable | Estado |
 | --- | --- | --- |
 | TASK-007 | Presentación, decisión, nuevas revisiones y recibos idempotentes; carreras y clave con cuerpo diferente | Implementada, pruebas locales y cloud pasadas: idempotencia, carreras, historial y decisión única |
-| TASK-008 | UI de entregas/revisiones y acta verificable; validar AC01-06 | UI, decisiones y acta JSON de la base probadas en los tres entornos; **pendiente: carga/verificación de medios S3, AC02 sobre adjuntos y aceptación de AC06 con piloto real** |
-| TASK-009 | Autoridad de escritura, recuperación, congelación de comandos y corte por proyecto | Runbook, congelación y recuperación en tabla nueva comprobados con datos sintéticos; **pendiente autoridad y autorización de corte del proyecto real** |
+| TASK-008 | UI de entregas/revisiones y acta verificable; validar AC01-06 | UI, decisiones y acta JSON probadas en los tres entornos; presentación y aceptación nativas reales y acta oficial verificadas con ZooBeriah Systems. **Pendiente: carga/verificación de medios S3, AC02 sobre adjuntos y conciliación de historia importada para AC06** |
+| TASK-009 | Autoridad de escritura, recuperación, congelación de comandos y corte por proyecto | Runbook, congelación y recuperación en tabla nueva comprobados con datos sintéticos; **pendiente autoridad y autorización de corte del proyecto heredado que se migre** |
 
 ## Fase 4: frontend en Lambda y operación
 
@@ -55,18 +55,19 @@ El producto conserva su nombre original **Logs of Change**, identificador `logso
 | TASK-011 | Angular SSR Lambda, CloudFront OAC, certificado y DNS; configuración pública y PKCE | Base publicada en los tres entornos; SSR, DNS/TLS, login/callback y QA escritorio/móvil comprobados |
 | TASK-012 | Artefactos reproducibles, despliegue independiente y validación CI | Scripts y workflow implementados; CI valida el HEAD publicado de la rama. Ver REMOTE_HANDOFF.md para reproducir y recuperar outputs sin redesplegar |
 | TASK-013 | Smoke con identidades sintéticas, TLS/DNS, flujo de revisión y evidencia íntegra | Base verificada en los tres entornos con 12 comprobaciones. Incremento verificado en los tres con 17 comprobaciones, CLI, consola, publicación y retiro; QA escritorio/móvil sin errores y limpieza confirmada por lecturas posteriores. No representa aceptación del piloto real |
-| TASK-014 | Promover a testing y después main, con observabilidad y revisión del piloto | Base promovida por PR #339; incremento elevado por development → testing → main, PR #340–343, y producción verificada en 5b30c8633bd2e1311f266206e300b1a5032acbc6. **Pendientes observabilidad operativa y revisión del piloto real** |
+| TASK-014 | Promover a testing y después main, con observabilidad y revisión del piloto | Base e incremento promovidos y verificados en producción; corrección de primera activación Plus elevada por PR #347–349 tras pruebas. Piloto nativo real completado en TASK-016. **Pendientes observabilidad operativa y revisión/corte del piloto de migración heredada** |
 | TASK-015 | Integraciones de producto y consultas públicas con plan Plus | Completada: API/CLI para proyectos externos, claves limitadas y proyección pública publicadas y verificadas en development, testing y producción. Plus administrado por plataforma, sin cobros automáticos. [Plan del incremento](feature-integrations-public-1.md) y [rollout por entorno](../docs/operations/production-logsofchange.md) |
+| TASK-016 | Usar un proyecto propio como piloto nativo real de integración y publicación | Completada 2026-11-19, Ciudad de México: ZooBeriah Systems envió una entrega por CLI/API desde su checkout, cuentas reales distintas presentaron y aceptaron revisión 1, acta oficial verificada y [dashboard público activo](https://logsofchange.lynxpardelle.com/p/zooberiah-systems). Clave temporal revocada y datos reales conservados. [Informe](../docs/operations/pilot-zooberiah-systems.md) |
 
-## Primer flujo pendiente tras el incremento publicado
+## Primer flujo pendiente tras el piloto nativo
 
-Seleccionar un proyecto piloto y su organización, obtener una exportación autorizada, validar la proyección y conciliar contra el origen real (TASK-005), seguido del selector reversible (TASK-006). Los siguientes incrementos de código independientes son cargas privadas con versiones verificadas (TASK-008) y gestión administrativa de invitaciones sin habilitar acceso público.
+El piloto nativo de ZooBeriah Systems ya tiene organización, accesos, aprobación actual y publicación verificadas. El siguiente flujo distinto es seleccionar una fuente heredada y su mapeo organizacional, obtener una exportación autorizada y conciliarla (TASK-005), seguido del selector reversible de lectura (TASK-006). Permanecen también las cargas privadas con versiones verificadas (TASK-008) y la gestión administrativa de invitaciones del producto; las invitaciones nativas puntuales del piloto no implementan esa consola de administración.
 
 No se considera completado un criterio por existir su plantilla o por pasar un fixture sintético. Los resultados ejecutados viven en los informes de [desarrollo](../docs/operations/development-logsofchange.md), [testing](../docs/operations/testing-logsofchange.md) y [producción y rollout](../docs/operations/production-logsofchange.md).
 
 ## Validación
 
-La CI del incremento pasó 135 pruebas Node sin omisiones, 20 Angular, build SSR y cfn-lint de cinco plantillas. Se comprobaron el bundle Lambda, CLI descargable y 17 recorridos integrados con datos sintéticos en cada entorno. Producción usó `verify-production.mjs --approve-production=true --mode=all`, con fuentes de HEAD y recursos validados. El informe registra los commits y la limpieza; datos reales, restore y corte se consignan con su alcance exacto.
+La validación corriente pasó 137 pruebas Node sin omisiones, 20 Angular, build SSR y cfn-lint de cinco plantillas, incluidas las dos regresiones del alta inicial de Plus. Se comprobaron el bundle Lambda, CLI descargable y 17 recorridos sintéticos por entorno; producción dispone de `verify-production.mjs --approve-production=true --mode=all`, con fuentes de HEAD y recursos validados. Además, el piloto real verificó CLI/API idempotentes, cuentas personales distintas, acta oficial, proyección anónima y SSR, escritorio/móvil sin desbordamiento horizontal ni errores de consola y cierre de su clave temporal. Sus datos reales se conservan; restore y corte de migración se consignan por separado.
 
 ## Operación y límites
 
