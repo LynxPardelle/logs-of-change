@@ -36,6 +36,12 @@ El administrador selecciona una revisión aceptada, un nombre y slug públicos y
 
 El DTO público excluye identidades, motivos de decisión, IDs privados, recibos y actas completas. El slug queda reservado para el proyecto. Despublicar elimina la proyección para futuras lecturas; no borra copias que otras personas hayan guardado. El plan Free conserva las aprobaciones manuales; Plus habilita integraciones y publicación. La plataforma asigna el plan administrativamente: este incremento no implementa pagos ni afirma una suscripción cobrada.
 
+## Piloto real publicado
+
+El [dashboard de ZooBeriah Systems](https://logsofchange.lynxpardelle.com/p/zooberiah-systems) acredita un piloto productivo con cuentas reales distintas: envío desde el checkout consumidor por CLI, reintentos por CLI y API sin duplicar la entrega, presentación, aceptación actual y descarga del acta oficial con integridad comprobada. La proyección pública contiene sólo el título y los tres cambios elegidos; la clave temporal del piloto quedó revocada y la publicación permanece disponible.
+
+El [JSON de la entrega](examples/pilots/zooberiah-systems/release.json) conserva una fuente pública verificable. El [informe del piloto](docs/operations/pilot-zooberiah-systems.md) distingue sus pruebas sintéticas previas de la decisión real y la publicación. Este recorrido nativo es independiente de la migración del backend heredado.
+
 ## Arranque y comprobaciones
 
 Node.js 24.15 o superior dentro de Node.js 24. Las dependencias de `web/` y `serverless/` tienen lockfiles propios; no requieren instalar el backend heredado.
