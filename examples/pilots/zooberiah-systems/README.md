@@ -1,8 +1,11 @@
 # Piloto de revisión: catálogo de ZooBeriah Systems
 
-[release.json](release.json) contiene una propuesta de **borrador nuevo** para la organización `zooberiah` y el proyecto `zooberiah-systems`. Usa una entrega real ya publicada como material de revisión actual. El commit, el PR y el despliegue anteriores sólo acreditan su procedencia: no se importan como decisiones o aprobaciones históricas de Logs of Change.
+[release.json](release.json) es el payload utilizado en el **piloto real completado de ZooBeriah Systems**. Se envió como borrador privado mediante el CLI y la API productivos, se presentó y aceptó personalmente como revisión 1 y se publicó con los campos elegidos. Usa una entrega real anterior como material de revisión actual: el commit, el PR y el despliegue de origen acreditan procedencia, sin importar decisiones o aprobaciones históricas de Logs of Change.
 
-La presencia de estos archivos no acredita un envío, presentación, decisión o publicación del piloto. Esas operaciones deben comprobarse y registrarse después de ejecutarlas. Este ejemplo no contiene cuentas personales, correos, identificadores de sesión o credenciales.
+La ejecución y sus comprobaciones constan en el [registro del piloto](../../../docs/operations/pilot-zooberiah-systems.md). **La clave de ingesta quedó revocada; los datos aceptados y la publicación permanecen conservados.** Este directorio no contiene cuentas personales, correos, identificadores de sesión, IDs privados de entrega, credenciales ni el acta privada.
+
+- [Dashboard público](https://logsofchange.lynxpardelle.com/p/zooberiah-systems).
+- [API pública](https://logsofchange.lynxpardelle.com/api/v1/public/projects/zooberiah-systems).
 
 ## Evidencia pública de la entrega de origen
 
@@ -21,30 +24,33 @@ Al preparar este ejemplo se contrastaron estas respuestas mediante HTTP de sólo
 
 El payload se limita a esas tres afirmaciones comprobadas. No incorpora personas, contactos, datos de clientes, precios, fotografías, fuentes privadas o resultados de pruebas que no se hayan ejecutado. Las páginas pueden cambiar después; la revisión humana debe contrastar de nuevo lo que vaya a aceptar.
 
-## Preparar el envío a desarrollo y pruebas
+## Validación previa en desarrollo y pruebas
 
-Usar Node.js 24 y una clave del proyecto correspondiente a cada entorno. La operación de plataforma debe haber configurado la organización, el proyecto activo, sus permisos y Plus. Un administrador vigente del proyecto crea después la clave de integración; no puede asignarse Plus desde la consola. El secreto se suministra al proceso como `LOGSOFCHANGE_API_KEY` desde el gestor de secretos; no se incluye en argumentos, archivos del ejemplo o logs.
+El mismo payload pasó **17 comprobaciones integradas en development y 17 en testing** mediante ámbitos UUID e identidades de prueba. Incluyeron CLI real y replay, API, actas y dashboard SSR de escritorio/móvil. Los ámbitos se limpiaron y las lecturas posteriores confirmaron su ausencia. No se utilizaron las cuentas reales para esas decisiones de prueba.
 
-Desde la raíz de Logs of Change, ejecutar primero en desarrollo y después en pruebas, una vez preparados sus permisos y credenciales independientes:
+La corrección operativa detectada al habilitar Plus también se verificó por separado: stdout vacío de un `get-item` exitoso representa una fila ausente, mientras proyectos faltantes o JSON malformado bloquean la escritura. La promoción de esa corrección pasó **137 pruebas Node sin omisiones y 20 Angular**, build SSR, empaquetado y validación de cinco plantillas. El registro enlazado conserva las ejecuciones y merge commits de development → testing → main.
 
-```sh
-node cli/logsofchange.mjs --environment=development --org=zooberiah --project=zooberiah-systems --file=examples/pilots/zooberiah-systems/release.json --idempotency-key=pilot-zooberiah-sites-0143877-r1-dev
-node cli/logsofchange.mjs --environment=testing --org=zooberiah --project=zooberiah-systems --file=examples/pilots/zooberiah-systems/release.json --idempotency-key=pilot-zooberiah-sites-0143877-r1-test
-```
+## Resultado productivo real
 
-Cada comando sólo intenta crear un borrador privado. Mantener su clave de idempotencia y el mismo contenido ante un resultado desconocido; no repetir con otra credencial para resolver un timeout. Si cambia el contenido que se desea revisar, tratarlo como otro comando y revisar su procedencia. El CLI también puede distribuirse al proyecto consumidor sin instalar dependencias ni requerir una cuenta AWS. [Uso del CLI](../../../cli/README.md).
+Fecha local: **19 de noviembre de 2026, Ciudad de México**. Las fechas de auditoría siguientes son UTC del 20 de noviembre:
 
-Estos comandos son instrucciones de uso y no un registro de ejecución. Antes de promover estos datos/documentos, acreditar el payload y el flujo en development y testing. La ejecución posterior en producción exige su promoción y verificación por separado.
+| Operación | Resultado comprobado |
+| --- | --- |
+| CLI y API, 04:40:36 UTC | El CLI desde el checkout consumidor creó un borrador privado. El replay y la API directa devolvieron la misma entrega. La clave no pudo leer el expediente y el checkout de origen permaneció sin cambios |
+| Presentación, 04:46:04.724 UTC | Se presentó personalmente la revisión 1 desde la cuenta editora |
+| Decisión, 04:56:31.157 UTC | Se aceptó personalmente esa revisión desde la cuenta revisora, distinta de la cuenta presentadora |
+| Acta, 04:57:27.771 UTC | El acta oficial descargada de la UI coincidió con los registros y pasó la verificación de integridad |
+| Publicación, 04:58:43.915 UTC | El agente operó la consola de la cuenta revisora/publicadora con autorización para el dashboard; publicó únicamente `title` y `changes`, excluyendo `summary` |
+| Cierre, 05:04:42.111 UTC | Se confirmó la revocación de la clave configurada para 24 horas. La revisión aceptada y la publicación permanecieron conservadas |
 
-El payload ya pasó 17 comprobaciones integradas en development y 17 en testing mediante ámbitos UUID e identidades de prueba, con CLI real, API, actas y dashboard SSR; esos ámbitos se limpiaron y las lecturas posteriores confirmaron su ausencia. No se utilizaron las cuentas reales para esas decisiones de prueba. El [registro del piloto](../../../docs/operations/pilot-zooberiah-systems.md) distingue esos resultados de la presentación, decisión y publicación productivas pendientes.
+La consulta pública pasó siete comprobaciones de sólo lectura y revisión de navegador en escritorio de 1280 px y móvil de 390 px, sin desbordamiento horizontal ni errores de consola. Se comprobó SSR con el título y los tres cambios reales, HTTP 200, `no-store`, CORS sin credenciales y ausencia de resumen, actores, motivos, identificadores privados o secretos. Las comprobaciones posteriores a la revocación confirmaron que el dashboard y la API seguían disponibles; una revisión HTTP independiente confirmó el DTO y su misma fecha de aceptación. Estas comprobaciones desplegadas se distinguen de la CI de código.
 
-## Revisión y publicación mediante personas
+La presentación y la aceptación personales no se ejecutaron desde la CLI ni mediante escrituras de plataforma. La operación administrativa de publicación fue posterior y no sustituyó la decisión de la persona revisora. El campo `source` permanece como procedencia privada del borrador y no se copia al DTO público. [Contrato vigente](../../../docs/architecture/contracts/integrations-public-v1.md).
 
-Después de un envío confirmado:
+## Consultar o adaptar sin reenviar este piloto
 
-1. Una persona autorizada abre Entregas en el origen correspondiente de Logs of Change y revisa el borrador, su procedencia y las tres afirmaciones públicas antes de presentarlo.
-2. Otra persona autorizada, distinta de quien preparó o presentó la revisión, decide en la consola si acepta o solicita cambios. El PR o CI de ZooBeriah no sustituyen esa decisión actual.
-3. Si la revisión es aceptada, un administrador vigente entra en `/integrations`, previsualiza `title`, `summary` y `changes` y decide expresamente si publicarlos. La fecha de aceptación será la de esta nueva revisión, no la del despliegue de origen.
-4. La consulta sin sesión sólo queda disponible después de esa publicación mediante `/p/SLUG` y `/api/v1/public/projects/SLUG`, con el slug elegido y reservado por el administrador.
+Para consultar el resultado, abrir el dashboard o la API públicos enlazados arriba. Para el expediente y el acta, iniciar sesión personalmente en [Logs of Change](https://logsofchange.lynxpardelle.com), seleccionar **ZooBeriah Systems** y abrir la entrega **«ZooBeriah Systems: catálogo público de sitios web»**, revisión 1 aceptada. La publicación se gestiona en [Integraciones](https://logsofchange.lynxpardelle.com/integrations).
 
-No se añaden scripts para presentar, decidir o publicar en nombre de personas. Las claves de integración no tienen esos permisos. El campo `source` permanece como procedencia privada del borrador y no se copia al DTO público; la proyección propuesta sólo usa título, resumen y cambios, todos publicables. [Contrato vigente](../../../docs/architecture/contracts/integrations-public-v1.md).
+**No reenviar invitaciones, recrear esta entrega o repetir el envío/replay con la clave revocada para volver a consultar el resultado.** No borrar datos reales ni retirar la publicación como si fueran el ámbito de un canary sintético. El piloto está cerrado y su evidencia debe conservarse.
+
+El JSON puede servir de referencia para otro proyecto, pero una nueva entrega necesita contenido revisado, su organización/proyecto configurados, permisos, Plus y una credencial propia vigente. Su secreto se suministra sólo al proceso mediante `LOGSOFCHANGE_API_KEY`, sin argumentos, JSON o logs. Node.js 24 ejecuta el CLI sin dependencias ni cuenta AWS del consumidor; el [uso general del CLI](../../../cli/README.md) documenta sus parámetros. Una persona presenta y otra decide cada nueva revisión; una clave de ingesta nunca recibe esos permisos.
